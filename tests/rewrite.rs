@@ -12,7 +12,7 @@ mod tests {
         fn echo() {
             init();
 
-            let schema = recad::Schema::load(Path::new("tests/echo/echo.kicad_sch")).unwrap();
+            let schema = recad_core::Schema::load(Path::new("tests/echo/echo.kicad_sch")).unwrap();
             let mut file = std::fs::File::create("/tmp/summe.kicad_sch").unwrap();
             schema.write(&mut file).unwrap();
 
@@ -53,7 +53,7 @@ mod tests {
         fn all_elements() {
             init();
 
-            let schema = recad::Schema::load(Path::new("tests/all_elements/all_elements.kicad_sch")).unwrap();
+            let schema = recad_core::Schema::load(Path::new("tests/all_elements/all_elements.kicad_sch")).unwrap();
             let mut file = std::fs::File::create("/tmp/all_elements.kicad_sch").unwrap();
             schema.write(&mut file).unwrap();
 

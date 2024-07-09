@@ -1,8 +1,8 @@
 mod tests {
     mod parser {
-        use std::{fs::File, path::Path};
+        use std::fs::File;
 
-        use recad::{
+        use recad_core::{
             draw::At, gr::Pt, plot::{
                 theme::{Theme, Themes},
                 Plotter, SvgPlotter,

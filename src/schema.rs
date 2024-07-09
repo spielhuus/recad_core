@@ -457,7 +457,7 @@ impl Schema {
     ///Load a schema from a path
     ///
     ///```
-    ///use recad::Schema;
+    ///use recad_core::Schema;
     ///use std::path::Path;
     ///
     ///let path = Path::new("tests/summe.kicad_sch");
@@ -478,7 +478,7 @@ impl Schema {
     ///Get a Symbol by reference and unit number.
     ///
     ///```
-    /// use recad::Schema;
+    /// use recad_core::Schema;
     /// use std::path::Path;
     ///
     /// let path = Path::new("tests/summe.kicad_sch");
@@ -508,7 +508,7 @@ impl Schema {
     ///// Obtain symbol unit from pin number.
     /////
     /////```
-    ///// use recad::Schema;
+    ///// use recad_core::Schema;
     ///// use std::path::Path;
     /////
     ///// let path = Path::new("tests/summe.kicad_sch");
@@ -546,7 +546,7 @@ impl Schema {
     /// Get a library symbol by lib_id
     ///
     ///```
-    /// use recad::Schema;
+    /// use recad_core::Schema;
     /// use std::path::Path;
     ///
     /// let path = Path::new("tests/summe.kicad_sch");

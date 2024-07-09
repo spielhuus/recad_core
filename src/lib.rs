@@ -192,7 +192,7 @@ impl SymbolLibrary {
 ///     path::Path,
 /// };
 ///
-/// use recad::{
+/// use recad_core::{
 ///     Schema, Plot,
 ///     plot::{
 ///         Plotter,
@@ -203,7 +203,7 @@ impl SymbolLibrary {
 /// let path = Path::new("tests/summe.kicad_sch");
 /// let schema = Schema::load(path).unwrap();
 ///
-/// let mut svg = recad::plot::SvgPlotter::new();
+/// let mut svg = recad_core::plot::SvgPlotter::new();
 /// schema.plot(&mut svg, &Theme::from(Themes::Kicad2020)).unwrap();
 ///
 /// let mut file = std::fs::File::create("/tmp/summe.svg").unwrap();
