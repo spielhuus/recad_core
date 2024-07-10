@@ -6,7 +6,7 @@ use crate::{
     math,
     schema::{GlobalLabel, Junction, LocalLabel, SchemaItem, Symbol, Wire},
     sexp::constants::el,
-    Drawable, Drawer, Error, Schema,
+    Drawable, Drawer, Error, Schema, Plot
 };
 
 ///Attributes for the elements.
@@ -157,20 +157,6 @@ impl Default for At {
 //TODO this should not be here
 ///implment the drawer functions for the schema.
 impl Schema {
-    ///Move the cursor position to the pt.
-    pub fn move_to(mut self, pt: At) -> Self {
-        self.last_pos = pt;
-        self
-    }
-
-    ///Resolve the At position to a Pt
-    fn get_pt(&self, at: &At) -> Pt {
-        match at {
-            At::Pt(pt) => *pt,
-            At::Pin(_, _) => todo!(),
-            At::Dot(_) => todo!(),
-        }
-    }
 }
 
 impl Drawer<LocalLabel, Schema> for Schema {

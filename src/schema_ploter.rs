@@ -2,16 +2,10 @@ use lazy_static::lazy_static;
 use ndarray::{arr2, Array2, Axis};
 
 use crate::{
-    gr::{Arc, Circle, Color, GraphicItem, Polyline, Pt, Pts, Rect, Rectangle},
-    math::{bbox::Bbox, ToNdarray, Transform},
-    plot::{
+    draw::At, gr::{Arc, Circle, Color, GraphicItem, Polyline, Pt, Pts, Rect, Rectangle}, math::{bbox::Bbox, ToNdarray, Transform}, plot::{
         theme::{Style, Theme},
         FontEffects, Paint, Plotter,
-    },
-    schema::SchemaItem,
-    sexp::constants::el,
-    symbols::Pin,
-    Error, Plot, Schema,
+    }, schema::SchemaItem, sexp::constants::el, symbols::Pin, Error, Plot, Schema
 };
 
 lazy_static! {
@@ -44,6 +38,19 @@ macro_rules! outline {
 }
 
 impl Plot for Schema {
+    ///Move the cursor position to the pt.
+    fn move_to(mut self, pt: At) {
+        self.last_pos = pt;
+    }
+
+    ///Resolve the At position to a Pt
+    fn get_pt(&self, at: &At) -> Pt {
+        match at {
+            At::Pt(pt) => *pt,
+            At::Pin(_, _) => todo!(),
+            At::Dot(_) => todo!(),
+        }
+    }
     fn plot(&self, plotter: &mut impl Plotter, theme: &Theme) -> Result<(), Error> {
         let paper_size: (f32, f32) = self.paper.clone().into();
         plotter.set_view_box(Rect {

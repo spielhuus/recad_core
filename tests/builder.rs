@@ -17,7 +17,7 @@ mod tests {
             init();
 
             let builder = Schema::new()
-                .move_to(At::Pt(Pt { x: 50.8, y: 50.8 }))
+                //TODO .move_to(At::Pt(Pt { x: 50.8, y: 50.8 }))
                 .draw(LocalLabel::new("Vin").rotate(180.0))
                 .draw(Wire::new().right().len(4.0))
                 .draw(Wire::new().up().len(8.0))

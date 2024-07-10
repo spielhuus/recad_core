@@ -145,6 +145,8 @@ pub struct SymbolLibrary {
 }
 
 use circuit::CircuitItem;
+use draw::At;
+use gr::Pt;
 use indexmap::IndexMap;
 use plot::{theme::Theme, Plotter};
 use schema::{Instance, SchemaItem};
@@ -212,6 +214,8 @@ impl SymbolLibrary {
 /// ```
 pub trait Plot {
     fn plot(&self, plotter: &mut impl Plotter, theme: &Theme) -> Result<(), Error>;
+    fn move_to(self, pt: At);
+    fn get_pt(&self, at: &At) -> Pt;
 }
 
 trait SexpWrite {
