@@ -225,14 +225,6 @@ trait SexpWrite {
 /// Access attributes of the drawable elements.
 pub trait Drawable<F> {
     fn attr(self, attr: Attribute) -> F;
-    //fn mirror(self, axis: &str) -> F;
-    //fn anchor(self, pin: &str) -> F;
-    //fn rotate(self, angle: f32) -> F;
-    //fn len(self, len: f32) -> F;
-    //fn up(self) -> F;
-    //fn down(self) -> F;
-    //fn left(self) -> F;
-    //fn right(self) -> F;
 }
 
 ///Creat a schema or pcb file from code.

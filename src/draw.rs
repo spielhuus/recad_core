@@ -184,6 +184,9 @@ impl Drawer<LocalLabel> for Schema {
         let pt = self.get_pt(&self.last_pos);
         label.pos.x = pt.x;
         label.pos.y = pt.y;
+        if let Some(angle) = label.attrs.angle() {
+            label.pos.angle = angle;
+        }
         self.items.push(SchemaItem::LocalLabel(label));
         Ok(())
     }
