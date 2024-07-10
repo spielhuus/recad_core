@@ -44,7 +44,7 @@ macro_rules! outline {
 }
 
 impl Plot for Schema {
-    fn plot(self, plotter: &mut impl Plotter, theme: &Theme) -> Result<(), Error> {
+    fn plot(&self, plotter: &mut impl Plotter, theme: &Theme) -> Result<(), Error> {
         let paper_size: (f32, f32) = self.paper.clone().into();
         plotter.set_view_box(Rect {
             start: Pt { x: 0.0, y: 0.0 },

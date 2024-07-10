@@ -211,7 +211,7 @@ impl SymbolLibrary {
 /// assert!(res.is_ok());
 /// ```
 pub trait Plot {
-    fn plot(self, plotter: &mut impl Plotter, theme: &Theme) -> Result<(), Error>;
+    fn plot(&self, plotter: &mut impl Plotter, theme: &Theme) -> Result<(), Error>;
 }
 
 trait SexpWrite {

@@ -466,8 +466,8 @@ impl Schema {
     ///assert!(schema.is_ok());
     ///
     pub fn load(path: &Path) -> Result<Self, Error> {
-        let parser = crate::sexp::parser::SexpParser::load(path).unwrap();
-        let tree = crate::sexp::SexpTree::from(parser.iter()).unwrap();
+        let parser = crate::sexp::parser::SexpParser::load(path)?;
+        let tree = crate::sexp::SexpTree::from(parser.iter())?;
         tree.into()
     }
     ///Save a schema to a path
