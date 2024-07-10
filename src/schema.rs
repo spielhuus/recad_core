@@ -734,6 +734,14 @@ impl Schema {
     }
 }
 
+impl fmt::Display for Schema {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut writer = Vec::new();
+        self.write(&mut writer).unwrap();
+        String::from_utf8(writer).unwrap().fmt(f)
+    }
+}
+
 /// Abstraction of the schema items for iteration
 #[derive(Debug)]
 pub enum SchemaItem {
