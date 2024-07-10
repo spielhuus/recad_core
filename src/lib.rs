@@ -214,7 +214,7 @@ impl SymbolLibrary {
 /// ```
 pub trait Plot {
     fn plot(&self, plotter: &mut impl Plotter, theme: &Theme) -> Result<(), Error>;
-    fn move_to(self, pt: At);
+    fn move_to(&mut self, pt: At);
     fn get_pt(&self, at: &At) -> Pt;
 }
 
@@ -235,6 +235,6 @@ pub trait Drawable<F> {
 }
 
 ///Creat a schema or pcb file from code.
-pub trait Drawer<T, F> {
-    fn draw(self, item: T) -> F;
+pub trait Drawer<T> {
+    fn draw(&mut self, item: T) -> Result<(), Error>;
 }

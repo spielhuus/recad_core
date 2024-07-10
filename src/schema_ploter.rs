@@ -39,7 +39,7 @@ macro_rules! outline {
 
 impl Plot for Schema {
     ///Move the cursor position to the pt.
-    fn move_to(mut self, pt: At) {
+    fn move_to(&mut self, pt: At) {
         self.last_pos = pt;
     }
 

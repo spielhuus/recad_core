@@ -159,13 +159,13 @@ impl Default for At {
 impl Schema {
 }
 
-impl Drawer<LocalLabel, Schema> for Schema {
-    fn draw(mut self, mut label: LocalLabel) -> Schema {
+impl Drawer<LocalLabel> for Schema {
+    fn draw(&mut self, mut label: LocalLabel) -> Result<(), Error> {
         let pt = self.get_pt(&self.last_pos);
         label.pos.x = pt.x;
         label.pos.y = pt.y;
         self.items.push(SchemaItem::LocalLabel(label));
-        self
+        Ok(())
     }
 }
 
@@ -204,13 +204,13 @@ impl Drawable<LocalLabel> for LocalLabel {
     }
 }
 
-impl Drawer<GlobalLabel, Schema> for Schema {
-    fn draw(mut self, mut label: GlobalLabel) -> Schema {
+impl Drawer<GlobalLabel> for Schema {
+    fn draw(&mut self, mut label: GlobalLabel) -> Result<(), Error> {
         let pt = self.get_pt(&self.last_pos);
         label.pos.x = pt.x;
         label.pos.y = pt.y;
         self.items.push(SchemaItem::GlobalLabel(label));
-        self
+        Ok(())
     }
 }
 
@@ -249,8 +249,8 @@ impl Drawable<GlobalLabel> for GlobalLabel {
     }
 }
 
-impl Drawer<Junction, Schema> for Schema {
-    fn draw(mut self, mut junction: Junction) -> Schema {
+impl Drawer<Junction> for Schema {
+    fn draw(&mut self, mut junction: Junction) -> Result<(), Error> {
         let pt = self.get_pt(&self.last_pos);
         junction.pos = Pos {
             x: pt.x,
@@ -258,7 +258,7 @@ impl Drawer<Junction, Schema> for Schema {
             angle: 0.0,
         };
         self.items.push(SchemaItem::Junction(junction));
-        self
+        Ok(())
     }
 }
 
@@ -301,8 +301,8 @@ impl Drawable<Wire> for Wire {
     }
 }
 
-impl Drawer<Wire, Schema> for Schema {
-    fn draw(mut self, mut wire: Wire) -> Schema {
+impl Drawer<Wire> for Schema {
+    fn draw(&mut self, mut wire: Wire) -> Result<(), Error> {
         let pt = self.get_pt(&self.last_pos);
         let to_pos = match wire.attrs.direction() {
             Direction::Left => Pt {
@@ -328,7 +328,7 @@ impl Drawer<Wire, Schema> for Schema {
 
         self.items.push(SchemaItem::Wire(wire));
         self.last_pos = At::Pt(to_pos);
-        self
+        Ok(()) 
     }
 }
 
@@ -426,8 +426,8 @@ impl Symbol {
     //}
 }
 
-impl Drawer<Symbol, Schema> for Schema {
-    fn draw(mut self, symbol: Symbol) -> Schema {
+impl Drawer<Symbol> for Schema {
+    fn draw(&mut self, symbol: Symbol) -> Result<(), Error> {
         //load the library symbol
         let lib = if let Some(lib) = self.library_symbol(&symbol.lib_id) {
             lib.clone()
@@ -505,6 +505,6 @@ impl Drawer<Symbol, Schema> for Schema {
             lib.pin("2").unwrap(),
         ));
         self.items.push(SchemaItem::Symbol(new_symbol));
-        self
+        Ok(())
     }
 }
