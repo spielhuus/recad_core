@@ -84,6 +84,19 @@ impl LibrarySymbol {
         }
         None
     }
+    
+    ///Get a Pin by the pin number
+    pub fn pin_unit(&self, number: &str) -> Option<u8> {
+        for u in &self.units {
+            for p in &u.pins {
+                if p.number.name == number {
+                    return Some(u.unit());
+                }
+            }
+        }
+        None
+    }
+
     ///Get all pins for a symbol unit
     pub fn pins(&self, unit: u8) -> Vec<&Pin> {
         let mut pins = Vec::new();

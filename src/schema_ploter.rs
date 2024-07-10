@@ -2,10 +2,17 @@ use lazy_static::lazy_static;
 use ndarray::{arr2, Array2, Axis};
 
 use crate::{
-    draw::At, gr::{Arc, Circle, Color, GraphicItem, Polyline, Pt, Pts, Rect, Rectangle}, math::{bbox::Bbox, ToNdarray, Transform}, plot::{
+    draw::At,
+    gr::{Arc, Circle, Color, GraphicItem, Polyline, Pt, Pts, Rect, Rectangle},
+    math::{bbox::Bbox, pin_position, ToNdarray, Transform},
+    plot::{
         theme::{Style, Theme},
         FontEffects, Paint, Plotter,
-    }, schema::SchemaItem, sexp::constants::el, symbols::Pin, Error, Plot, Schema
+    },
+    schema::SchemaItem,
+    sexp::constants::el,
+    symbols::Pin,
+    Error, Plot, Schema,
 };
 
 lazy_static! {
@@ -44,13 +51,33 @@ impl Plot for Schema {
     }
 
     ///Resolve the At position to a Pt
+    ///TODO is this the right place?
     fn get_pt(&self, at: &At) -> Pt {
         match at {
             At::Pt(pt) => *pt,
-            At::Pin(_, _) => todo!(),
+            At::Pin(reference, pin) => {
+                let unit = self.pin_unit(reference, pin).ok_or(Error(
+                    "builder".to_string(),
+                    format!("pin unit not found ({}, {})", reference, pin),
+                )).unwrap();
+                let symbol = self.symbol(reference, unit).ok_or(Error(
+                    "builder".to_string(),
+                    format!("symbol unit not found ({}, {})", reference, unit),
+                )).unwrap();
+                let lib = self.library_symbol(&symbol.lib_id).ok_or(Error(
+                    "builder".to_string(),
+                    format!("symbol unit not found ({}, {})", reference, unit),
+                )).unwrap();
+                let pin = lib.pin(pin).ok_or(Error(
+                    "builder".to_string(),
+                    format!("pin not found ({})", pin),
+                )).unwrap();
+                pin_position(symbol, pin)
+            }
             At::Dot(_) => todo!(),
         }
     }
+
     fn plot(&self, plotter: &mut impl Plotter, theme: &Theme) -> Result<(), Error> {
         let paper_size: (f32, f32) = self.paper.clone().into();
         plotter.set_view_box(Rect {

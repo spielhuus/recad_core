@@ -149,6 +149,8 @@ pub struct LocalLabel {
     pub uuid: String,
     /// Specifies whether the fields and positions are automatically populated.
     pub fields_autoplaced: bool,
+    /// The drawer attributes of the label.
+    pub attrs: To,
 }
 
 impl LocalLabel {
@@ -160,6 +162,7 @@ impl LocalLabel {
             color: None,
             uuid: crate::uuid!(),
             fields_autoplaced: false,
+            attrs: To::new(),
         }
     }
 }
@@ -183,6 +186,8 @@ pub struct GlobalLabel {
     /// Universally unique identifier for the label.
     pub uuid: String,
     // TODO: Implement Properties struct and use it in this definition.
+    /// The drawer attributes of the label.
+    pub attrs: To,
 }
 
 /// `NoConnect` represents no electrical connection between two points.
@@ -449,7 +454,7 @@ impl Schema {
             library_symbols: Vec::new(),
             items: Vec::new(),
             sheet_instances: Vec::new(),
-            grid: 1.27,
+            grid: 2.54,
             last_pos: At::Pt(Pt { x: 0.0, y: 0.0 }),
         }
     }
@@ -505,43 +510,39 @@ impl Schema {
             .copied()
     }
 
-    ///// Obtain symbol unit from pin number.
-    /////
-    /////```
-    ///// use recad_core::Schema;
-    ///// use std::path::Path;
-    /////
-    ///// let path = Path::new("tests/summe.kicad_sch");
-    /////
-    ///// let schema = Schema::load(path).unwrap();
-    ///// assert_eq!(Some(1), schema.pin_unit("U2", "1"));
-    ///// assert_eq!(Some(2), schema.pin_unit("U2", "7"));
-    /////
-    //pub fn pin_unit(&self, reference: &str, pin: &str) -> Option<u8> {
-    //    self.items
-    //        .iter()
-    //        .filter_map(|s| match s {
-    //            SchemaItem::Symbol(s) => {
-    //                if reference == s.property(el::PROPERTY_REFERENCE) {
-    //                    if let Some(lib) = self.library_symbol(&s.lib_id) {
-    //                        if lib.pin(pin).is_some() {
-    //                            Some(s.unit)
-    //                        } else {
-    //                            None
-    //                        }
-    //                    } else {
-    //                        None
-    //                    }
-    //                } else {
-    //                    None
-    //                }
-    //            }
-    //            _ => None,
-    //        })
-    //        .collect::<Vec<u8>>()
-    //        .first()
-    //        .copied()
-    //}
+    /// Obtain symbol unit from pin number.
+    ///
+    ///```
+    /// use recad_core::Schema;
+    /// use std::path::Path;
+    ///
+    /// let path = Path::new("tests/summe.kicad_sch");
+    ///
+    /// let schema = Schema::load(path).unwrap();
+    /// assert_eq!(Some(1), schema.pin_unit("U2", "1"));
+    /// assert_eq!(Some(2), schema.pin_unit("U2", "7"));
+    ///
+    pub fn pin_unit(&self, reference: &str, pin: &str) -> Option<u8> {
+        self.items
+            .iter()
+            .filter_map(|s| match s {
+                SchemaItem::Symbol(s) => {
+                    if reference == s.property(el::PROPERTY_REFERENCE) {
+                        if let Some(lib) = self.library_symbol(&s.lib_id) {
+                            lib.pin_unit(pin)
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
+            })
+            .collect::<Vec<u8>>()
+            .first()
+            .copied()
+    }
 
     /// Get a library symbol by lib_id
     ///

@@ -1,12 +1,8 @@
 use crate::{
-    gr::{Color, Property},
-    schema::{
+    gr::{Color, Property}, round, schema::{
         Bus, BusEntry, GlobalLabel, HierarchicalLabel, HierarchicalPin, HierarchicalSheet,
         Junction, LocalLabel, NetclassFlag, NoConnect, Symbol, Text, TextBox, Wire,
-    },
-    sexp::{builder::Builder, constants::el},
-    symbols::{LibrarySymbol, Pin},
-    yes_or_no, Error, SexpWrite,
+    }, sexp::{builder::Builder, constants::el}, symbols::{LibrarySymbol, Pin}, yes_or_no, Error, SexpWrite
 };
 
 fn sub_lib_id(input: &str) -> Result<String, Error> {
@@ -27,8 +23,8 @@ impl SexpWrite for Bus {
         builder.push(el::PTS);
         for pt in &self.pts.0 {
             builder.push(el::XY);
-            builder.value(&pt.x.to_string());
-            builder.value(&pt.y.to_string());
+            builder.value(&round(pt.x).to_string());
+            builder.value(&round(pt.y).to_string());
             builder.end();
         }
         builder.end();
@@ -45,8 +41,8 @@ impl SexpWrite for BusEntry {
     fn write(&self, builder: &mut Builder) -> Result<(), Error> {
         builder.push(el::BUS_ENTRY);
         builder.push(el::AT);
-        builder.value(&self.pos.x.to_string());
-        builder.value(&self.pos.y.to_string());
+        builder.value(&round(self.pos.x).to_string());
+        builder.value(&round(self.pos.y).to_string());
         builder.end();
         builder.push(el::SIZE);
         builder.value(&self.size.0.to_string());
@@ -71,9 +67,9 @@ impl SexpWrite for GlobalLabel {
             builder.end();
         }
         builder.push(el::AT);
-        builder.value(&self.pos.x.to_string());
-        builder.value(&self.pos.y.to_string());
-        builder.value(&self.pos.angle.to_string());
+        builder.value(&round(self.pos.x).to_string());
+        builder.value(&round(self.pos.y).to_string());
+        builder.value(&round(self.pos.angle).to_string());
         builder.end();
         if self.fields_autoplaced {
             builder.push(el::FIELDS_AUTOPLACED);
@@ -98,9 +94,9 @@ impl SexpWrite for HierarchicalPin {
         builder.text(&self.name);
         builder.value(&self.connection_type.to_string());
         builder.push(el::AT);
-        builder.value(&self.pos.x.to_string());
-        builder.value(&self.pos.y.to_string());
-        builder.value(&self.pos.angle.to_string());
+        builder.value(&round(self.pos.x).to_string());
+        builder.value(&round(self.pos.y).to_string());
+        builder.value(&round(self.pos.angle).to_string());
         builder.end();
         self.effects.write(builder)?;
         builder.push(el::UUID);
@@ -121,9 +117,9 @@ impl SexpWrite for HierarchicalLabel {
             builder.end();
         }
         builder.push(el::AT);
-        builder.value(&self.pos.x.to_string());
-        builder.value(&self.pos.y.to_string());
-        builder.value(&self.pos.angle.to_string());
+        builder.value(&round(self.pos.x).to_string());
+        builder.value(&round(self.pos.y).to_string());
+        builder.value(&round(self.pos.angle).to_string());
         builder.end();
         if self.fields_autoplaced {
             builder.push(el::FIELDS_AUTOPLACED);
@@ -143,12 +139,12 @@ impl SexpWrite for HierarchicalSheet {
     fn write(&self, builder: &mut Builder) -> Result<(), Error> {
         builder.push(el::SHEET);
         builder.push(el::AT);
-        builder.value(&self.pos.x.to_string());
-        builder.value(&self.pos.y.to_string());
+        builder.value(&round(self.pos.x).to_string());
+        builder.value(&round(self.pos.y).to_string());
         builder.end();
         builder.push(el::SIZE);
-        builder.value(&self.width.to_string());
-        builder.value(&self.height.to_string());
+        builder.value(&round(self.width).to_string());
+        builder.value(&round(self.height).to_string());
         builder.end();
         if self.fields_autoplaced {
             builder.push(el::FIELDS_AUTOPLACED);
@@ -193,8 +189,8 @@ impl SexpWrite for Junction {
     fn write(&self, builder: &mut Builder) -> Result<(), Error> {
         builder.push(el::JUNCTION);
         builder.push(el::AT);
-        builder.value(&self.pos.x.to_string());
-        builder.value(&self.pos.y.to_string());
+        builder.value(&round(self.pos.x).to_string());
+        builder.value(&round(self.pos.y).to_string());
         builder.end();
         builder.push(el::DIAMETER);
         builder.value(&self.diameter.to_string());
@@ -217,9 +213,9 @@ impl SexpWrite for LocalLabel {
         builder.push(el::LABEL);
         builder.text(&self.text);
         builder.push(el::AT);
-        builder.value(&self.pos.x.to_string());
-        builder.value(&self.pos.y.to_string());
-        builder.value(&self.pos.angle.to_string());
+        builder.value(&round(self.pos.x).to_string());
+        builder.value(&round(self.pos.y).to_string());
+        builder.value(&round(self.pos.angle).to_string());
         builder.end();
         if self.fields_autoplaced {
             builder.push(el::FIELDS_AUTOPLACED);
@@ -248,8 +244,8 @@ impl SexpWrite for NetclassFlag {
             builder.end();
         }
         builder.push(el::AT);
-        builder.value(&self.pos.x.to_string());
-        builder.value(&self.pos.y.to_string());
+        builder.value(&round(self.pos.x).to_string());
+        builder.value(&round(self.pos.y).to_string());
         builder.value(&(self.pos.angle / 255.0).to_string());
         builder.end();
         if self.fields_autoplaced {
@@ -273,8 +269,8 @@ impl SexpWrite for NoConnect {
     fn write(&self, builder: &mut Builder) -> Result<(), Error> {
         builder.push(el::NO_CONNECT);
         builder.push(el::AT);
-        builder.value(&self.pos.x.to_string());
-        builder.value(&self.pos.y.to_string());
+        builder.value(&round(self.pos.x).to_string());
+        builder.value(&round(self.pos.y).to_string());
         builder.end();
         builder.push(el::UUID);
         builder.text(&self.uuid);
@@ -291,9 +287,9 @@ impl SexpWrite for Symbol {
         builder.text(&self.lib_id);
         builder.end();
         builder.push(el::AT);
-        builder.value(&self.pos.x.to_string());
-        builder.value(&self.pos.y.to_string());
-        builder.value(&self.pos.angle.to_string());
+        builder.value(&round(self.pos.x).to_string());
+        builder.value(&round(self.pos.y).to_string());
+        builder.value(&round(self.pos.angle).to_string());
         builder.end();
         if let Some(mirror) = &self.mirror {
             builder.push(el::MIRROR);
@@ -360,8 +356,8 @@ impl SexpWrite for Wire {
         builder.push(el::PTS);
         for pt in &self.pts.0 {
             builder.push(el::XY);
-            builder.value(&pt.x.to_string());
-            builder.value(&pt.y.to_string());
+            builder.value(&round(pt.x).to_string());
+            builder.value(&round(pt.y).to_string());
             builder.end();
         }
         builder.end();
@@ -381,9 +377,9 @@ impl SexpWrite for Property {
         builder.text(&self.value);
 
         builder.push(el::AT);
-        builder.value(&self.pos.x.to_string());
-        builder.value(&self.pos.y.to_string());
-        builder.value(&self.pos.angle.to_string());
+        builder.value(&round(self.pos.x).to_string());
+        builder.value(&round(self.pos.y).to_string());
+        builder.value(&round(self.pos.angle).to_string());
         builder.end();
 
         self.effects.write(builder)?;
@@ -472,9 +468,9 @@ impl SexpWrite for Pin {
         builder.value(&self.electrical_type.to_string());
         builder.value(&self.graphical_style.to_string());
         builder.push(el::AT);
-        builder.value(&self.pos.x.to_string());
-        builder.value(&self.pos.y.to_string());
-        builder.value(&self.pos.angle.to_string());
+        builder.value(&round(self.pos.x).to_string());
+        builder.value(&round(self.pos.y).to_string());
+        builder.value(&round(self.pos.angle).to_string());
         builder.end();
         builder.push(el::LENGTH);
         builder.value(&self.length.to_string());
@@ -506,9 +502,9 @@ impl SexpWrite for Text {
         builder.value(&yes_or_no(self.exclude_from_sim));
         builder.end();
         builder.push(el::AT);
-        builder.value(&self.pos.x.to_string());
-        builder.value(&self.pos.y.to_string());
-        builder.value(&self.pos.angle.to_string());
+        builder.value(&round(self.pos.x).to_string());
+        builder.value(&round(self.pos.y).to_string());
+        builder.value(&round(self.pos.angle).to_string());
         builder.end();
         self.effects.write(builder)?;
         builder.push(el::UUID);
@@ -527,13 +523,13 @@ impl SexpWrite for TextBox {
         builder.value(&yes_or_no(self.exclude_from_sim));
         builder.end();
         builder.push(el::AT);
-        builder.value(&self.pos.x.to_string());
-        builder.value(&self.pos.y.to_string());
-        builder.value(&self.pos.angle.to_string());
+        builder.value(&round(self.pos.x).to_string());
+        builder.value(&round(self.pos.y).to_string());
+        builder.value(&round(self.pos.angle).to_string());
         builder.end();
         builder.push(el::SIZE);
-        builder.value(&self.width.to_string());
-        builder.value(&self.height.to_string());
+        builder.value(&round(self.width).to_string());
+        builder.value(&round(self.height).to_string());
         builder.end();
         self.stroke.write(builder)?;
         self.fill.write(builder)?;

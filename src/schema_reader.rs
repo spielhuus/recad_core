@@ -220,6 +220,7 @@ impl std::convert::From<&Sexp> for Result<LocalLabel, Error> {
             fields_autoplaced: SexpString::first(sexp, el::FIELDS_AUTOPLACED)
                 .unwrap_or(el::YES.to_string())
                 == el::YES,
+            attrs: To::new(),
         })
     }
 }
@@ -236,6 +237,7 @@ impl std::convert::From<&Sexp> for Result<GlobalLabel, Error> {
             effects: sexp.into(),
             props: properties(sexp),
             uuid: error_if_none!(sexp.first(el::UUID), "uuid is mandatory")?,
+            attrs: To::new(),
         })
     }
 }

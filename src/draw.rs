@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use crate::{
     gr::{Pos, Pt, Pts},
-    math,
+    math::{self, pin_position},
     schema::{GlobalLabel, Junction, LocalLabel, SchemaItem, Symbol, Wire},
     sexp::constants::el,
     Drawable, Drawer, Error, Plot, Schema,
@@ -22,6 +22,7 @@ pub enum Attribute {
     Toy(At),
     Property(String),
     Dot(Vec<DotPosition>),
+    At(At),
 }
 
 ///Dot position
@@ -59,11 +60,31 @@ impl To {
         self.attributes.push(attr);
     }
 
+    ///Get the to attribute..
+    pub fn at(&self) -> Option<At> {
+        for i in &self.attributes {
+            if let Attribute::At(to) = i {
+                return Some(to.clone());
+            }
+        }
+        None
+    }
+
     ///Get the anchor attribute..
     pub fn anchor(&self) -> Option<String> {
         for i in &self.attributes {
             if let Attribute::Anchor(pin) = i {
                 return Some(pin.to_string());
+            }
+        }
+        None
+    }
+
+    ///Get the anchor attribute..
+    pub fn mirror(&self) -> Option<String> {
+        for i in &self.attributes {
+            if let Attribute::Mirror(m) = i {
+                return Some(m.to_string());
             }
         }
         None
@@ -169,37 +190,9 @@ impl Drawer<LocalLabel> for Schema {
 }
 
 impl Drawable<LocalLabel> for LocalLabel {
-    fn rotate(mut self, angle: f32) -> LocalLabel {
-        self.pos.angle = angle;
+    fn attr(mut self, attr: Attribute) -> LocalLabel {
+        self.attrs.push(attr);
         self
-    }
-
-    fn len(self, len: f32) -> LocalLabel {
-        self
-    }
-
-    fn up(self) -> LocalLabel {
-        self
-    }
-
-    fn down(self) -> LocalLabel {
-        self
-    }
-
-    fn left(self) -> LocalLabel {
-        self
-    }
-
-    fn right(self) -> LocalLabel {
-        self
-    }
-
-    fn anchor(self, pin: &str) -> LocalLabel {
-        self
-    }
-
-    fn mirror(self, axis: &str) -> LocalLabel {
-        todo!()
     }
 }
 
@@ -214,37 +207,9 @@ impl Drawer<GlobalLabel> for Schema {
 }
 
 impl Drawable<GlobalLabel> for GlobalLabel {
-    fn rotate(mut self, angle: f32) -> GlobalLabel {
-        self.pos.angle = angle;
+    fn attr(mut self, attr: Attribute) -> GlobalLabel {
+        self.attrs.push(attr);
         self
-    }
-
-    fn len(self, len: f32) -> GlobalLabel {
-        todo!()
-    }
-
-    fn up(self) -> GlobalLabel {
-        todo!()
-    }
-
-    fn down(self) -> GlobalLabel {
-        todo!()
-    }
-
-    fn left(self) -> GlobalLabel {
-        todo!()
-    }
-
-    fn right(self) -> GlobalLabel {
-        todo!()
-    }
-
-    fn anchor(self, pin: &str) -> GlobalLabel {
-        self
-    }
-
-    fn mirror(self, axis: &str) -> GlobalLabel {
-        todo!()
     }
 }
 
@@ -262,69 +227,52 @@ impl Drawer<Junction> for Schema {
 }
 
 impl Drawable<Wire> for Wire {
-    fn rotate(self, angle: f32) -> Wire {
+    fn attr(mut self, attr: Attribute) -> Wire {
+        self.attrs.push(attr);
         self
-    }
-
-    fn len(mut self, len: f32) -> Wire {
-        self.attrs.push(Attribute::Length(len));
-        self
-    }
-
-    fn up(mut self) -> Wire {
-        self.attrs.push(Attribute::Direction(Direction::Up));
-        self
-    }
-
-    fn down(mut self) -> Wire {
-        self.attrs.push(Attribute::Direction(Direction::Down));
-        self
-    }
-
-    fn left(mut self) -> Wire {
-        self.attrs.push(Attribute::Direction(Direction::Left));
-        self
-    }
-
-    fn right(mut self) -> Wire {
-        self.attrs.push(Attribute::Direction(Direction::Right));
-        self
-    }
-
-    fn anchor(self, pin: &str) -> Wire {
-        self
-    }
-
-    fn mirror(self, axis: &str) -> Wire {
-        todo!()
     }
 }
 
 impl Drawer<Wire> for Schema {
+    /// implement the draw function
+    ///
+    /// first the Tox and Toy attributes are searched
+    /// otherwise a direction and length is used
     fn draw(&mut self, mut wire: Wire) -> Result<(), Error> {
-        let pt = self.get_pt(&self.last_pos);
-        let to_pos = match wire.attrs.direction() {
-            Direction::Left => Pt {
-                x: pt.x - wire.attrs.length().unwrap_or(self.grid) * self.grid,
-                y: pt.y,
-            },
-            Direction::Right => Pt {
-                x: pt.x + wire.attrs.length().unwrap_or(self.grid) * self.grid,
-                y: pt.y,
-            },
-            Direction::Up => Pt {
-                x: pt.x,
-                y: pt.y - wire.attrs.length().unwrap_or(self.grid) * self.grid,
-            },
-            Direction::Down => Pt {
-                x: pt.x,
-                y: pt.y + wire.attrs.length().unwrap_or(self.grid) * self.grid,
-            },
+
+        let pt = if let Some(to) = wire.attrs.at() {
+            self.get_pt(&to)
+        } else {
+            self.get_pt(&self.last_pos)
         };
 
+        let to_pos = if let Some(tox) = wire.attrs.tox() {
+            let target_pos = self.get_pt(tox);
+            Pt { x: target_pos.x, y: pt.y }
+        } else if let Some(toy) = wire.attrs.toy() {
+            let target_pos = self.get_pt(toy);
+            Pt { x: pt.x, y: target_pos.y }
+        } else {
+            match wire.attrs.direction() {
+                Direction::Left => Pt {
+                    x: pt.x - wire.attrs.length().unwrap_or(self.grid),
+                    y: pt.y,
+                },
+                Direction::Right => Pt {
+                    x: pt.x + wire.attrs.length().unwrap_or(self.grid),
+                    y: pt.y,
+                },
+                Direction::Up => Pt {
+                    x: pt.x,
+                    y: pt.y - wire.attrs.length().unwrap_or(self.grid),
+                },
+                Direction::Down => Pt {
+                    x: pt.x,
+                    y: pt.y + wire.attrs.length().unwrap_or(self.grid),
+                },
+            }
+        };
         wire.pts = Pts(vec![pt, to_pos]);
-        //TODO uuid: crate::uuid!(),
-
         self.items.push(SchemaItem::Wire(wire));
         self.last_pos = At::Pt(to_pos);
         Ok(())
@@ -343,90 +291,45 @@ impl Drawer<Wire> for Schema {
 //}
 
 impl Drawable<Symbol> for Symbol {
-    fn rotate(mut self, angle: f32) -> Symbol {
-        self.attrs.push(Attribute::Rotate(angle));
+    fn attr(mut self, attr: Attribute) -> Symbol {
+        self.attrs.push(attr);
         self
     }
-
-    fn len(self, len: f32) -> Symbol {
-        todo!()
-    }
-
-    fn up(self) -> Symbol {
-        todo!()
-    }
-
-    fn down(self) -> Symbol {
-        todo!()
-    }
-
-    fn left(self) -> Symbol {
-        todo!()
-    }
-
-    fn right(self) -> Symbol {
-        todo!()
-    }
-
-    fn anchor(mut self, pin: &str) -> Symbol {
-        self.attrs.push(Attribute::Anchor(pin.to_string()));
-        self
-    }
-
-    fn mirror(mut self, axis: &str) -> Symbol {
-        self.attrs.push(Attribute::Mirror(axis.to_string()));
-        self
-    }
-    //fn rotate(mut self, angle: f32) -> Self {
-    //    self.angle = angle;
-    //    self
-    //}
-    //pub fn mirror(mut self, mirror: &str) -> Self {
-    //    self.mirror = Some(mirror.to_string());
-    //    self
-    //}
-    //pub fn anchor(mut self, pin: &str) -> Self {
-    //    self.anchor = pin.to_string();
-    //    self
-    //}
-    //pub fn unit(mut self, unit: u8) -> Self {
-    //    self.unit = unit;
-    //    self
-    //}
 }
 
-impl Symbol {
-    pub fn tox(mut self, reference: &str, pin: &str) -> Self {
-        self.attrs.push(Attribute::Tox(At::Pin(
-            reference.to_string(),
-            pin.to_string(),
-        )));
-        self
-    }
-    //pub fn len(mut self, len: f32) -> Self {
-    //    self.len = len;
-    //    self
-    //}
-    //pub fn up(mut self) -> Self {
-    //    self.attrs.push(Attribute::Direction(Direction::Up));
-    //    self
-    //}
-    //pub fn down(mut self) -> Self {
-    //    self.attrs.push(Attribute::Direction(Direction::Down));
-    //    self
-    //}
-    //pub fn left(mut self) -> Self {
-    //    self.attrs.push(Attribute::Direction(Direction::Left));
-    //    self
-    //}
-    //pub fn right(mut self) -> Self {
-    //    self.attrs.push(Attribute::Direction(Direction::Right));
-    //    self
-    //}
-}
+//impl Symbol {
+//    pub fn tox(mut self, reference: &str, pin: &str) -> Self {
+//        self.attrs.push(Attribute::Tox(At::Pin(
+//            reference.to_string(),
+//            pin.to_string(),
+//        )));
+//        self
+//    }
+//    //pub fn len(mut self, len: f32) -> Self {
+//    //    self.len = len;
+//    //    self
+//    //}
+//    //pub fn up(mut self) -> Self {
+//    //    self.attrs.push(Attribute::Direction(Direction::Up));
+//    //    self
+//    //}
+//    //pub fn down(mut self) -> Self {
+//    //    self.attrs.push(Attribute::Direction(Direction::Down));
+//    //    self
+//    //}
+//    //pub fn left(mut self) -> Self {
+//    //    self.attrs.push(Attribute::Direction(Direction::Left));
+//    //    self
+//    //}
+//    //pub fn right(mut self) -> Self {
+//    //    self.attrs.push(Attribute::Direction(Direction::Right));
+//    //    self
+//    //}
+//}
 
 impl Drawer<Symbol> for Schema {
     fn draw(&mut self, symbol: Symbol) -> Result<(), Error> {
+        let mut new_last_pos = None;
         //load the library symbol
         let lib = if let Some(lib) = self.library_symbol(&symbol.lib_id) {
             lib.clone()
@@ -444,7 +347,7 @@ impl Drawer<Symbol> for Schema {
         //create the new symbol
         let mut new_symbol = lib.symbol(symbol.unit);
         new_symbol.pos.angle = symbol.attrs.angle().unwrap_or(0.0);
-        new_symbol.mirror = symbol.mirror.clone();
+        new_symbol.mirror = symbol.attrs.mirror();
 
         //create the transformer
         let anchor = if let Some(anchor) = symbol.attrs.anchor() {
@@ -460,34 +363,31 @@ impl Drawer<Symbol> for Schema {
             ))?,
         );
 
-        //for attr in &symbol.attrs.attributes {
-        //    println!("{:?}", attr);
-        //    match attr {
-        //        Attribute::Anchor(_) => todo!(),
-        //        Attribute::Direction(_) => todo!(),
-        //        Attribute::Id(_) => todo!(),
-        //        Attribute::Mirror(_) => todo!(),
-        //        Attribute::Length(_) => todo!(),
-        //        Attribute::Rotate(_) => todo!(),
-        //        Attribute::Tox(at) => {
-        //            //match at {
-        //            //    At::Pt(_) => todo!(),
-        //            //    At::Pin(reference, pin) => {
-        //            //        let to_symbol = self.symbol(reference, unit)
-        //            //        let target_pos = crate::math::pin_position(&new_symbol, self.pin(&reference, &pin).unwrap());
-        //            //        println!("  To({:?})", target_pos);
-        //            //    },
-        //            //    At::Dot(_) => todo!(),
-        //            //}
-        //        }
-        //        Attribute::Toy(_) => todo!(),
-        //        Attribute::Property(_) => todo!(),
-        //        Attribute::Dot(_) => todo!(),
-        //    }
-        //}
-        //
+        if let Some(tox) = symbol.attrs.tox() {
+            //TODO not finished
+            let target_pos = self.get_pt(tox);
+            let pin1 = pin_position(&new_symbol, lib.pin("1").unwrap());
+            let pin2 = pin_position(&new_symbol, lib.pin("2").unwrap());
+            let symbol_length = pin1.x - pin2.x;
+            let pt = self.get_pt(&self.last_pos);
+            let total_length = pt.x - target_pos.x;
+            let wire_length = (total_length.abs() - symbol_length.abs()) / 2.0;
+    
+            self.draw(Wire::new().attr(Attribute::Direction(Direction::Right)).attr(Attribute::Length(wire_length))).unwrap();
+            self.last_pos = At::Pt(Pt { x: target_pos.x, y: pt.y});
+            self.draw(Wire::new().attr(Attribute::Direction(Direction::Left)).attr(Attribute::Length(wire_length))).unwrap();
+
+            new_last_pos = Some(At::Pt(Pt { x: target_pos.x, y: pt.y}));
+            self.last_pos = At::Pt(Pt { x: pt.x + wire_length, y: pt.y})
+        }
+                
         //calculate position
-        let pt = self.get_pt(&self.last_pos);
+        let pt = if let Some(to) = symbol.attrs.at() {
+            self.get_pt(&to)
+        } else {
+            self.get_pt(&self.last_pos)
+        };
+        
         let start_pt = Pt {
             x: pt.x - pin_pos.x,
             y: pt.y - pin_pos.y,
@@ -503,7 +403,7 @@ impl Drawer<Symbol> for Schema {
         );
         new_symbol.set_property(
             el::PROPERTY_VALUE,
-            symbol.property(el::PROPERTY_REFERENCE).as_str(),
+            symbol.property(el::PROPERTY_VALUE).as_str(),
         );
 
         //create the pins
@@ -516,10 +416,20 @@ impl Drawer<Symbol> for Schema {
         math::place_properties(&lib, &mut new_symbol);
 
         //TODO the next pin should be pin 2
-        self.last_pos = At::Pt(crate::math::pin_position(
-            &new_symbol,
-            lib.pin("2").unwrap(),
-        ));
+        if let Some(last_pos) = new_last_pos {
+            self.last_pos = last_pos;
+        } else {
+            let pin_count = lib.pins(new_symbol.unit).len();
+            let out_pin = if pin_count == 1 || anchor == "2" {
+                String::from("1")
+            } else {
+                String::from("2")
+            };
+            self.last_pos = At::Pt(crate::math::pin_position(
+                &new_symbol,
+                lib.pin(&out_pin).unwrap(),
+            ));
+        }
         self.items.push(SchemaItem::Symbol(new_symbol));
         Ok(())
     }

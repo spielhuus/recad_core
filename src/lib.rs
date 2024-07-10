@@ -33,7 +33,7 @@ macro_rules! uuid {
 
 #[inline(always)]
 fn round(n: f32) -> f32 {
-    format!("{:.2}", n).parse().unwrap()
+    format!("{:.4}", n).parse().unwrap()
 }
 
 #[inline(always)]
@@ -145,7 +145,7 @@ pub struct SymbolLibrary {
 }
 
 use circuit::CircuitItem;
-use draw::At;
+use draw::{At, Attribute};
 use gr::Pt;
 use indexmap::IndexMap;
 use plot::{theme::Theme, Plotter};
@@ -224,14 +224,15 @@ trait SexpWrite {
 
 /// Access attributes of the drawable elements.
 pub trait Drawable<F> {
-    fn mirror(self, axis: &str) -> F;
-    fn anchor(self, pin: &str) -> F;
-    fn rotate(self, angle: f32) -> F;
-    fn len(self, len: f32) -> F;
-    fn up(self) -> F;
-    fn down(self) -> F;
-    fn left(self) -> F;
-    fn right(self) -> F;
+    fn attr(self, attr: Attribute) -> F;
+    //fn mirror(self, axis: &str) -> F;
+    //fn anchor(self, pin: &str) -> F;
+    //fn rotate(self, angle: f32) -> F;
+    //fn len(self, len: f32) -> F;
+    //fn up(self) -> F;
+    //fn down(self) -> F;
+    //fn left(self) -> F;
+    //fn right(self) -> F;
 }
 
 ///Creat a schema or pcb file from code.
