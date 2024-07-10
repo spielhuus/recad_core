@@ -6,7 +6,7 @@ use crate::{
     math,
     schema::{GlobalLabel, Junction, LocalLabel, SchemaItem, Symbol, Wire},
     sexp::constants::el,
-    Drawable, Drawer, Error, Schema, Plot
+    Drawable, Drawer, Error, Plot, Schema,
 };
 
 ///Attributes for the elements.
@@ -156,8 +156,7 @@ impl Default for At {
 
 //TODO this should not be here
 ///implment the drawer functions for the schema.
-impl Schema {
-}
+impl Schema {}
 
 impl Drawer<LocalLabel> for Schema {
     fn draw(&mut self, mut label: LocalLabel) -> Result<(), Error> {
@@ -328,7 +327,7 @@ impl Drawer<Wire> for Schema {
 
         self.items.push(SchemaItem::Wire(wire));
         self.last_pos = At::Pt(to_pos);
-        Ok(()) 
+        Ok(())
     }
 }
 
@@ -448,7 +447,18 @@ impl Drawer<Symbol> for Schema {
         new_symbol.mirror = symbol.mirror.clone();
 
         //create the transformer
-        let pin_pos = crate::math::pin_position(&new_symbol, lib.pin(&symbol.attrs.anchor().unwrap()).unwrap());
+        let anchor = if let Some(anchor) = symbol.attrs.anchor() {
+            anchor
+        } else {
+            String::from("1")
+        };
+        let pin_pos = crate::math::pin_position(
+            &new_symbol,
+            lib.pin(&anchor).ok_or(Error(
+                "drawer".to_string(),
+                format!("anchor pin not found: {}:{}", symbol.property(el::PROPERTY_REFERENCE), anchor),
+            ))?,
+        );
 
         //for attr in &symbol.attrs.attributes {
         //    println!("{:?}", attr);
@@ -487,8 +497,14 @@ impl Drawer<Symbol> for Schema {
         new_symbol.pos.y = start_pt.y;
 
         //set the properties
-        new_symbol.set_property(el::PROPERTY_REFERENCE, symbol.property(el::PROPERTY_REFERENCE).as_str());
-        new_symbol.set_property(el::PROPERTY_VALUE, symbol.property(el::PROPERTY_REFERENCE).as_str());
+        new_symbol.set_property(
+            el::PROPERTY_REFERENCE,
+            symbol.property(el::PROPERTY_REFERENCE).as_str(),
+        );
+        new_symbol.set_property(
+            el::PROPERTY_VALUE,
+            symbol.property(el::PROPERTY_REFERENCE).as_str(),
+        );
 
         //create the pins
         for pin in &lib.pins(symbol.unit) {
