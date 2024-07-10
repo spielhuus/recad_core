@@ -182,13 +182,18 @@ impl Schema {}
 
 impl Drawer<LocalLabel> for Schema {
     fn draw(&mut self, mut label: LocalLabel) -> Result<(), Error> {
-        let pt = self.get_pt(&self.last_pos);
+        let pt = if let Some(at) = label.attrs.at() {
+            self.get_pt(&at)
+        } else {
+            self.get_pt(&self.last_pos)
+        };
         label.pos.x = pt.x;
         label.pos.y = pt.y;
         if let Some(angle) = label.attrs.angle() {
             label.pos.angle = angle;
         }
         self.items.push(SchemaItem::LocalLabel(label));
+        self.last_pos = At::Pt(pt);
         Ok(())
     }
 }
