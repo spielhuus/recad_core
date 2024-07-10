@@ -33,8 +33,9 @@ pub enum DotPosition {
 }
 
 ///Direction enum
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum Direction {
+    #[default]
     Left,
     Right,
     Up,
@@ -242,7 +243,6 @@ impl Drawer<Wire> for Schema {
     /// first the Tox and Toy attributes are searched
     /// otherwise a direction and length is used
     fn draw(&mut self, mut wire: Wire) -> Result<(), Error> {
-
         let pt = if let Some(to) = wire.attrs.at() {
             self.get_pt(&to)
         } else {
@@ -251,10 +251,16 @@ impl Drawer<Wire> for Schema {
 
         let to_pos = if let Some(tox) = wire.attrs.tox() {
             let target_pos = self.get_pt(tox);
-            Pt { x: target_pos.x, y: pt.y }
+            Pt {
+                x: target_pos.x,
+                y: pt.y,
+            }
         } else if let Some(toy) = wire.attrs.toy() {
             let target_pos = self.get_pt(toy);
-            Pt { x: pt.x, y: target_pos.y }
+            Pt {
+                x: pt.x,
+                y: target_pos.y,
+            }
         } else {
             match wire.attrs.direction() {
                 Direction::Left => Pt {
@@ -282,53 +288,12 @@ impl Drawer<Wire> for Schema {
     }
 }
 
-//pub struct Symbol {
-//    pub reference: String,
-//    pub value: String,
-//    pub lib_id: String,
-//    pub unit: u8,
-//    pub angle: f32,
-//    pub mirror: Option<String>,
-//    pub anchor: String,
-//    pub attrs: To,
-//}
-
 impl Drawable<Symbol> for Symbol {
     fn attr(mut self, attr: Attribute) -> Symbol {
         self.attrs.push(attr);
         self
     }
 }
-
-//impl Symbol {
-//    pub fn tox(mut self, reference: &str, pin: &str) -> Self {
-//        self.attrs.push(Attribute::Tox(At::Pin(
-//            reference.to_string(),
-//            pin.to_string(),
-//        )));
-//        self
-//    }
-//    //pub fn len(mut self, len: f32) -> Self {
-//    //    self.len = len;
-//    //    self
-//    //}
-//    //pub fn up(mut self) -> Self {
-//    //    self.attrs.push(Attribute::Direction(Direction::Up));
-//    //    self
-//    //}
-//    //pub fn down(mut self) -> Self {
-//    //    self.attrs.push(Attribute::Direction(Direction::Down));
-//    //    self
-//    //}
-//    //pub fn left(mut self) -> Self {
-//    //    self.attrs.push(Attribute::Direction(Direction::Left));
-//    //    self
-//    //}
-//    //pub fn right(mut self) -> Self {
-//    //    self.attrs.push(Attribute::Direction(Direction::Right));
-//    //    self
-//    //}
-//}
 
 impl Drawer<Symbol> for Schema {
     fn draw(&mut self, symbol: Symbol) -> Result<(), Error> {
@@ -362,7 +327,11 @@ impl Drawer<Symbol> for Schema {
             &new_symbol,
             lib.pin(&anchor).ok_or(Error(
                 "drawer".to_string(),
-                format!("anchor pin not found: {}:{}", symbol.property(el::PROPERTY_REFERENCE), anchor),
+                format!(
+                    "anchor pin not found: {}:{}",
+                    symbol.property(el::PROPERTY_REFERENCE),
+                    anchor
+                ),
             ))?,
         );
 
@@ -374,23 +343,42 @@ impl Drawer<Symbol> for Schema {
             let symbol_length = pin1.x - pin2.x;
             let pt = self.get_pt(&self.last_pos);
             let total_length = pt.x - target_pos.x;
-            let wire_length = (total_length.abs() - symbol_length.abs()) / 2.0;
-    
-            self.draw(Wire::new().attr(Attribute::Direction(Direction::Right)).attr(Attribute::Length(wire_length))).unwrap();
-            self.last_pos = At::Pt(Pt { x: target_pos.x, y: pt.y});
-            self.draw(Wire::new().attr(Attribute::Direction(Direction::Left)).attr(Attribute::Length(wire_length))).unwrap();
+            let wire_length = (total_length - symbol_length) / 2.0;
 
-            new_last_pos = Some(At::Pt(Pt { x: target_pos.x, y: pt.y}));
-            self.last_pos = At::Pt(Pt { x: pt.x + wire_length, y: pt.y})
+            self.draw(
+                Wire::new()
+                    .attr(Attribute::Direction(if wire_length < 0.0 { Direction::Right } else { Direction::Left }))
+                    .attr(Attribute::Length(wire_length.abs())),
+            )
+            .unwrap();
+            self.last_pos = At::Pt(Pt {
+                x: target_pos.x,
+                y: pt.y,
+            });
+            self.draw(
+                Wire::new()
+                    .attr(Attribute::Direction(if wire_length < 0.0 { Direction::Left } else { Direction::Right }))
+                    .attr(Attribute::Length(wire_length.abs())),
+            )
+            .unwrap();
+
+            new_last_pos = Some(At::Pt(Pt {
+                x: target_pos.x,
+                y: pt.y,
+            }));
+            self.last_pos = At::Pt(Pt {
+                x: pt.x - wire_length,
+                y: pt.y,
+            })
         }
-                
+
         //calculate position
         let pt = if let Some(to) = symbol.attrs.at() {
             self.get_pt(&to)
         } else {
             self.get_pt(&self.last_pos)
         };
-        
+
         let start_pt = Pt {
             x: pt.x - pin_pos.x,
             y: pt.y - pin_pos.y,
