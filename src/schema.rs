@@ -388,6 +388,8 @@ pub struct Symbol {
     /// The list of pins utilized by the symbol. This section may be empty if the symbol lacks any pins.
     pub pins: Vec<(String, String)>,
     /// The list of symbol instances grouped by project. Every symbol has at least one instance.
+    /// The usage of this section is not clear to me. It lists all pins from the symbol and
+    /// not just the one from the unit instance. 
     pub instances: Vec<Instance>,
     /// The drawer attributes of the wire.
     pub attrs: To,

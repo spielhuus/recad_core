@@ -415,7 +415,7 @@ impl Drawer<Symbol> for Schema {
         new_symbol.instances = vec![
             Instance { 
                 project: self.project.to_string(), 
-                path: self.uuid.to_string(), 
+                path: format!("/{}", self.uuid),
                 reference: new_symbol.property(el::PROPERTY_REFERENCE), 
                 unit: new_symbol.unit,
             }
