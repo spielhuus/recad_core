@@ -469,7 +469,14 @@ impl Schema {
             },
             library_symbols: Vec::new(),
             items: Vec::new(),
-            sheet_instances: Vec::new(),
+            sheet_instances: vec![
+                Instance { 
+                    project: String::new(),
+                    path: String::from("/"),
+                    reference: String::from("1"), 
+                    unit: 0,
+                }
+            ],
             grid: 2.54,
             last_pos: At::Pt(Pt { x: 0.0, y: 0.0 }),
         }
