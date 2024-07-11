@@ -291,21 +291,12 @@ pub struct Text {
 ///that defines how the text is displayed.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Effects {
-    pub font: Font,            // font attributes
-    pub justify: Vec<Justify>, // text justification
-    pub hide: bool,            // whether the text is hidden
-}
-
-///All text effects have an font section
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct Font {
-    pub face: Option<String>,      // TrueType font family name or "KiCad Font"
-    pub size: (f32, f32),          // font height and width
-    pub thickness: Option<f32>,    // line thickness of the font
-    pub bold: bool,                // whether the font is bold
-    pub italic: bool,              // whether the font is italicized
-    pub line_spacing: Option<f32>, // spacing between lines (not yet supported)
-    pub color: Option<Color>,      // spacing between lines (not yet supported)
+    /// font attributes
+    pub font: Font,
+    /// text justification
+    pub justify: Vec<Justify>,
+    /// whether the text is hidden
+    pub hide: bool,
 }
 
 impl Effects {
@@ -325,6 +316,39 @@ impl Effects {
             String::from("hanging")
         } else {
             String::from("middle")
+        }
+    }
+}
+
+///All text effects have an font section
+#[derive(Debug, Clone, PartialEq)]
+pub struct Font {
+    /// TrueType font family name or "KiCad Font".
+    pub face: Option<String>,
+    /// The font's height and width.
+    pub size: (f32, f32),
+    /// The line thickness of the font.
+    pub thickness: Option<f32>,
+    /// Whether the font is bold.
+    pub bold: bool,
+    /// Whether the font is italicized.
+    pub italic: bool,
+    /// Spacing between lines (not yet supported).
+    pub line_spacing: Option<f32>,
+    /// Color of the text (not yet supported).
+    pub color: Option<Color>,
+}
+
+impl Default for Font {
+    fn default() -> Self {
+        Self {
+            face: None,
+            size: (1.27, 1.27),
+            thickness: None,
+            bold: false,
+            italic: false,
+            line_spacing: None,
+            color: None,
         }
     }
 }

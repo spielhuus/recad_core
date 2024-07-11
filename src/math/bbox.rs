@@ -1,16 +1,17 @@
 use ndarray::{arr2, Array, Array2};
 
 use crate::{
-    gr::{Effects, Justify, Pos, Property, Pt, Rect},
-    schema::{GlobalLabel, Junction, LocalLabel, NoConnect, Symbol, Wire},
-    sexp::constants::el,
-    Error, Schema,
+    gr::{Effects, Justify, Pos, Property, Pt, Rect}, schema::{GlobalLabel, Junction, LocalLabel, NoConnect, Symbol, Wire}, sexp::constants::el, symbols::LibrarySymbol, Error, Schema
 };
 
 use super::{pin_position, ToNdarray, Transform};
 
 ///calculates the outline of a list of points.
 pub fn calculate(pts: Array2<f32>) -> Rect {
+    if pts.len_of(ndarray::Axis(0)) == 0 ||
+       pts.len_of(ndarray::Axis(1)) == 0 {
+           return Rect::default()
+    }
     let axis1 = pts.slice(ndarray::s![.., 0]);
     let axis2 = pts.slice(ndarray::s![.., 1]);
     Rect {
@@ -208,49 +209,51 @@ impl Bbox for Symbol {
 
         let mut pts = Array::zeros((0, 2));
         for s in &lib_symbol.units {
-            for g in &s.graphics {
-                match g {
-                    crate::gr::GraphicItem::Arc(_) => {} //TODO
-                    crate::gr::GraphicItem::Circle(circle) => {
-                        pts.push_row(
-                            transform
-                                .transform(&arr2(&[[
-                                    circle.center.x - circle.radius,
-                                    circle.center.y - circle.radius,
-                                ]]))
-                                .row(0),
-                        )
-                        .expect("insertion failed");
-                        pts.push_row(
-                            transform
-                                .transform(&arr2(&[[
-                                    circle.center.x + circle.radius,
-                                    circle.center.y + circle.radius,
-                                ]]))
-                                .row(0),
-                        )
-                        .expect("insertion failed");
-                    }
-                    crate::gr::GraphicItem::Curve(_) => {} //TODO
-                    crate::gr::GraphicItem::Line(line) => {
-                        line.pts.0.iter().for_each(|p| {
-                            pts.push_row(transform.transform(&p.ndarray()).row(0))
-                                .expect("insertion failed");
-                        });
-                    }
-                    crate::gr::GraphicItem::Polyline(poly) => {
-                        poly.pts.0.iter().for_each(|p| {
-                            pts.push_row(transform.transform(&p.ndarray()).row(0))
-                                .expect("insertion failed");
-                        });
-                    }
-                    crate::gr::GraphicItem::Rectangle(rect) => {
-                        pts.push_row(transform.transform(&rect.start.ndarray()).row(0))
+            if s.unit() == 0 || s.unit() == self.unit {
+                for g in &s.graphics {
+                    match g {
+                        crate::gr::GraphicItem::Arc(_) => {} //TODO
+                        crate::gr::GraphicItem::Circle(circle) => {
+                            pts.push_row(
+                                transform
+                                    .transform(&arr2(&[[
+                                        circle.center.x - circle.radius,
+                                        circle.center.y - circle.radius,
+                                    ]]))
+                                    .row(0),
+                            )
                             .expect("insertion failed");
-                        pts.push_row(transform.transform(&rect.end.ndarray()).row(0))
+                            pts.push_row(
+                                transform
+                                    .transform(&arr2(&[[
+                                        circle.center.x + circle.radius,
+                                        circle.center.y + circle.radius,
+                                    ]]))
+                                    .row(0),
+                            )
                             .expect("insertion failed");
+                        }
+                        crate::gr::GraphicItem::Curve(_) => {} //TODO
+                        crate::gr::GraphicItem::Line(line) => {
+                            line.pts.0.iter().for_each(|p| {
+                                pts.push_row(transform.transform(&p.ndarray()).row(0))
+                                    .expect("insertion failed");
+                            });
+                        }
+                        crate::gr::GraphicItem::Polyline(poly) => {
+                            poly.pts.0.iter().for_each(|p| {
+                                pts.push_row(transform.transform(&p.ndarray()).row(0))
+                                    .expect("insertion failed");
+                            });
+                        }
+                        crate::gr::GraphicItem::Rectangle(rect) => {
+                            pts.push_row(transform.transform(&rect.start.ndarray()).row(0))
+                                .expect("insertion failed");
+                            pts.push_row(transform.transform(&rect.end.ndarray()).row(0))
+                                .expect("insertion failed");
+                        }
+                        crate::gr::GraphicItem::Text(_) => {} //TODO
                     }
-                    crate::gr::GraphicItem::Text(_) => {} //TODO
                 }
             }
         }
@@ -258,9 +261,9 @@ impl Bbox for Symbol {
             pts.push_row(pin_position(self, p).ndarray().row(0))
                 .expect("insertion failed");
         }
-        for prop in &self.props {
-            if prop.visible() {}
-        }
+        //for prop in &self.props {
+        //    if prop.visible() { /* TODO */}
+        //}
 
         //calculate the bounds
         Ok(calculate(pts))
@@ -272,3 +275,48 @@ impl Bbox for Property {
         text(&self.value, &self.pos, &self.effects)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use crate::{math::bbox::Bbox, schema::SchemaItem, Schema, SymbolLibrary};
+
+    #[test]
+    fn test_bbox_symbol_1() {
+        let lib = SymbolLibrary {
+            pathlist: vec![PathBuf::from("/usr/share/kicad/symbols")]
+        };
+        let mut schema = Schema::new("test_bbox");
+        let lib_sym = lib.load("Amplifier_Operational:LM2904").unwrap();
+        let sym = lib_sym.symbol(1);
+        schema.library_symbols.push(lib_sym);
+        schema.items.push(SchemaItem::Symbol(sym.clone()));
+        assert_eq!("Amplifier_Operational:LM2904", sym.lib_id);
+
+        let bbox = sym.outline(&schema).unwrap();
+        assert_eq!(-7.62, bbox.start.x);
+        assert_eq!(-5.08, bbox.start.y);
+        assert_eq!(7.62, bbox.end.x);
+        assert_eq!(5.08, bbox.end.y);
+    }
+    #[test]
+    fn test_bbox_symbol_3() {
+        let lib = SymbolLibrary {
+            pathlist: vec![PathBuf::from("/usr/share/kicad/symbols")]
+        };
+        let mut schema = Schema::new("test_bbox");
+        let lib_sym = lib.load("Amplifier_Operational:LM2904").unwrap();
+        let sym = lib_sym.symbol(3);
+        schema.library_symbols.push(lib_sym);
+        schema.items.push(SchemaItem::Symbol(sym.clone()));
+        assert_eq!("Amplifier_Operational:LM2904", sym.lib_id);
+
+        let bbox = sym.outline(&schema).unwrap();
+        assert_eq!(-2.54, bbox.start.x);
+        assert_eq!(-7.62, bbox.start.y);
+        assert_eq!(-2.54, bbox.end.x);
+        assert_eq!(7.62, bbox.end.y);
+    }
+}
+

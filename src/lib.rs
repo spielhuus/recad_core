@@ -173,7 +173,14 @@ impl SymbolLibrary {
 
                             if let Some(extends) = &node.extends {
                                 if let Ok(mut ext_sym) = self.load(&format!("{}:{}", t.first().unwrap(), extends)) {
-                                    ext_sym.props.clone_from(&node.props);
+                                    for p in ext_sym.props.iter_mut() {
+                                        for node_prp in &node.props {
+                                            if p.key == node_prp.key {
+                                                p.value = node_prp.value.clone();
+                                            }
+                                        }
+                                    }
+                                    //ext_sym.props.clone_from(&node.props);
                                     ext_sym.lib_id = format!("{}:{}", t[0], t[1]);
                                     return Ok(ext_sym);
                                 } else {

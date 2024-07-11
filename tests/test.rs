@@ -5,18 +5,22 @@ mod tests {
 
         fn init() {
             let _ = env_logger::builder().is_test(true).try_init();
+            let path = Path::new("/tmp/recad");
+            if !path.exists() {
+                std::fs::create_dir_all(path).unwrap();
+            }
         }
 
         #[test]
         fn load_echo() {
             init();
             let schema = recad_core::Schema::load(Path::new("tests/echo/echo.kicad_sch")).unwrap();
-            let mut file = std::fs::File::create("/tmp/summe.kicad_sch").unwrap();
+            let mut file = std::fs::File::create("/tmp/recad/echo.kicad_sch").unwrap();
             schema.write(&mut file).unwrap();
 
             let mut svg = recad_core::plot::SvgPlotter::new();
             schema.plot(&mut svg, &Theme::from(Themes::Kicad2020)).unwrap();
-            let mut file = std::fs::File::create("/tmp/echo.svg").unwrap();
+            let mut file = std::fs::File::create("/tmp/recad/echo.svg").unwrap();
             svg.write(&mut file).unwrap();
         }
         
@@ -24,12 +28,12 @@ mod tests {
         fn load_summe() {
             init();
             let schema = recad_core::Schema::load(Path::new("tests/summe.kicad_sch")).unwrap();
-            let mut file = std::fs::File::create("/tmp/summe.kicad_sch").unwrap();
+            let mut file = std::fs::File::create("/tmp/recad/summe.kicad_sch").unwrap();
             schema.write(&mut file).unwrap();
 
             let mut svg = recad_core::plot::SvgPlotter::new();
             schema.plot(&mut svg, &Theme::from(Themes::Kicad2020)).unwrap();
-            let mut file = std::fs::File::create("/tmp/summe.svg").unwrap();
+            let mut file = std::fs::File::create("/tmp/recad/summe.svg").unwrap();
             svg.write(&mut file).unwrap();
         }
 

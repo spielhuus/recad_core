@@ -3,13 +3,14 @@ use ndarray::{arr2, Array2, ArrayView, Axis};
 pub mod bbox;
 mod transform;
 pub mod fonts;
-pub use transform::Transform;
 
-use crate::gr::Rect;
-use crate::symbols::{LibrarySymbol, Pin};
+pub use transform::Transform;
+use bbox::Bbox;
+
 use crate::{
-    gr::{Pos, Pt, Pts},
+    gr::{Pos, Pt, Pts, Rect},
     schema,
+    symbols::{LibrarySymbol, Pin}, Schema,
 };
 
 pub trait ToNdarray<T, O> {
@@ -96,10 +97,14 @@ pub fn pin_position(symbol: &schema::Symbol, pin: &Pin) -> Pt {
     }
 }
 
-pub fn place_properties(lib: &LibrarySymbol, symbol: &mut schema::Symbol) {
-    //let bbox = symbol.outline();
+const PROP_SPACING: f32 = 1.25;
+const LINE_SPACING: f32 = 2.5;
 
-    let pins = lib.pins(symbol.unit);
+pub fn place_properties(schema: &Schema, symbol: &mut schema::Symbol) {
+
+    let bbox = symbol.outline(schema).expect("outline");
+
+    let pins = schema.library_symbol(&symbol.lib_id).unwrap().pins(symbol.unit);
     let pin_directions: Vec<f32> = pins
         .iter()
         .map(|p| {
@@ -114,7 +119,7 @@ pub fn place_properties(lib: &LibrarySymbol, symbol: &mut schema::Symbol) {
     let vis_props = symbol.props.iter().filter(|p| p.visible()).count();
 
     if !pin_directions.contains(&90.0) {
-        let mut start = symbol.pos.y - 2.5 - vis_props as f32 * 1.75;
+        let mut start = bbox.start.y - PROP_SPACING - (vis_props - 1) as f32 * LINE_SPACING;
         for prop in &mut symbol.props {
             if !prop.visible() {
                 continue;
@@ -122,8 +127,27 @@ pub fn place_properties(lib: &LibrarySymbol, symbol: &mut schema::Symbol) {
             prop.pos.x = symbol.pos.x;
             prop.pos.y = start;
             prop.effects.justify.clear();
-            start += 1.75;
+            start += LINE_SPACING;
         }
+    } else if !pin_directions.contains(&0.0) {
+        let mut start = symbol.pos.y - ((vis_props - 1) as f32 * LINE_SPACING / 2.0);
+        for prop in &mut symbol.props {
+            if !prop.visible() {
+                continue;
+            }
+            prop.pos.x = bbox.end.x + PROP_SPACING;
+            prop.pos.y = start;
+            prop.effects.justify.clear();
+            start += LINE_SPACING;
+        }
+    } else {
+        println!("OTHER DIRECTION::{}:{}: 0.0=({}), 90.0=({}), 180.0=({}), 270.0=({})",
+            symbol.property(crate::sexp::constants::el::PROPERTY_REFERENCE),
+            symbol.unit,
+            pin_directions.iter().filter(|d| **d == 0.0).count(),
+            pin_directions.iter().filter(|d| **d == 90.0).count(),
+            pin_directions.iter().filter(|d| **d == 180.0).count(),
+            pin_directions.iter().filter(|d| **d == 270.0).count());
     }
 
     //let pos: Array1<f32> = property.pos.ndarray();

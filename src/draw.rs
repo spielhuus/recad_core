@@ -2,7 +2,7 @@
 use std::path::PathBuf;
 
 use crate::{
-    gr::{Pos, Pt, Pts},
+    gr::{Justify, Pos, Pt, Pts},
     math::{self, pin_position},
     schema::{GlobalLabel, Instance, Junction, LocalLabel, NoConnect, SchemaItem, Symbol, Wire},
     sexp::constants::el,
@@ -23,6 +23,7 @@ pub enum Attribute {
     Property(String),
     Dot(Vec<DotPosition>),
     At(At),
+    Unit(u8),
 }
 
 ///Dot position
@@ -137,6 +138,17 @@ impl To {
         }
         None
     }
+    
+    ///Get unit, only used for symbols.
+    pub fn unit(&self) -> Option<u8> {
+        for i in &self.attributes {
+            if let Attribute::Unit(unit) = i {
+                return Some(*unit);
+            }
+        }
+        None
+    }
+
     //Get the dot positions.
     pub fn dot(&self) -> Option<&Vec<DotPosition>> {
         for i in &self.attributes {
@@ -192,6 +204,14 @@ impl Drawer<LocalLabel> for Schema {
         if let Some(angle) = label.attrs.angle() {
             label.pos.angle = angle;
         }
+ 
+        // set the text adjustement
+        if label.pos.angle == 0.0 || label.pos.angle == 90.0 {
+            label.effects.justify = vec![Justify::Left, Justify::Bottom];
+        } else if label.pos.angle == 180.0 || label.pos.angle == 270.0 {
+            label.effects.justify = vec![Justify::Right, Justify::Bottom];
+        }
+
         self.items.push(SchemaItem::LocalLabel(label));
         self.last_pos = At::Pt(pt);
         Ok(())
@@ -317,10 +337,17 @@ impl Drawer<Symbol> for Schema {
             lib
         };
 
+        let selected_unit = if let Some(unit) = symbol.attrs.unit() {
+            unit
+        } else {
+            1
+        };
+
         //create the new symbol
-        let mut new_symbol = lib.symbol(symbol.unit);
+        let mut new_symbol = lib.symbol(selected_unit);
         new_symbol.pos.angle = symbol.attrs.angle().unwrap_or(0.0);
         new_symbol.mirror = symbol.attrs.mirror();
+        new_symbol.unit = selected_unit;
 
         //create the transformer
         let anchor = if let Some(anchor) = symbol.attrs.anchor() {
@@ -328,6 +355,7 @@ impl Drawer<Symbol> for Schema {
         } else {
             String::from("1")
         };
+
         let pin_pos = crate::math::pin_position(
             &new_symbol,
             lib.pin(&anchor).ok_or(Error(
@@ -393,9 +421,16 @@ impl Drawer<Symbol> for Schema {
         new_symbol.pos.y = start_pt.y;
 
         //set the properties
+        let reference = if new_symbol.property(el::PROPERTY_REFERENCE).starts_with("#PWR") {
+            self.next_power()
+        } else if new_symbol.property(el::PROPERTY_REFERENCE).starts_with("#FLG") {
+            self.next_flag()
+        } else {
+            symbol.property(el::PROPERTY_REFERENCE)
+        };
         new_symbol.set_property(
             el::PROPERTY_REFERENCE,
-            symbol.property(el::PROPERTY_REFERENCE).as_str(),
+            reference.as_str(),
         );
         new_symbol.set_property(
             el::PROPERTY_VALUE,
@@ -403,13 +438,13 @@ impl Drawer<Symbol> for Schema {
         );
 
         //create the pins
-        for pin in &lib.pins(symbol.unit) {
+        for pin in &lib.pins(selected_unit) {
             new_symbol
                 .pins
                 .push((pin.number.name.clone(), crate::uuid!()));
         }
 
-        math::place_properties(&lib, &mut new_symbol);
+        math::place_properties(self, &mut new_symbol);
 
         //add the instances section
         new_symbol.instances = vec![
@@ -417,15 +452,14 @@ impl Drawer<Symbol> for Schema {
                 project: self.project.to_string(), 
                 path: format!("/{}", self.uuid),
                 reference: new_symbol.property(el::PROPERTY_REFERENCE), 
-                unit: new_symbol.unit,
+                unit: selected_unit,
             }
         ];
 
-        //TODO the next pin should be pin 2
         if let Some(last_pos) = new_last_pos {
             self.last_pos = last_pos;
         } else {
-            let pin_count = lib.pins(new_symbol.unit).len();
+            let pin_count = lib.pins(selected_unit).len();
             let out_pin = if pin_count == 1 || anchor == "2" {
                 String::from("1")
             } else {
@@ -462,3 +496,31 @@ impl Drawable<NoConnect> for NoConnect {
         self
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use crate::{draw::{At, Attribute}, gr::Pt, schema::{LocalLabel, SchemaItem}, Drawable, Drawer, Schema};
+
+    #[test]
+    fn test_local_label() {
+        let mut schema = Schema::new("test");
+        let label = LocalLabel::new("INPUT")
+            .attr(Attribute::Rotate(90.0))
+            .attr(Attribute::At(At::Pt(Pt { x: 12.5, y: 12.5 })));
+
+        schema.draw(label.clone()).unwrap();
+        let Some(SchemaItem::LocalLabel(new_label)) = schema.items.last() else {
+            panic!("label not found");
+        };
+        assert_eq!("INPUT", new_label.text);
+        assert_eq!(12.5, new_label.pos.x);
+        assert_eq!(12.5, new_label.pos.y);
+        assert_eq!(90.0, new_label.pos.angle);
+
+
+
+    }
+}
+
+

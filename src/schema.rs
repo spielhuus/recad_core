@@ -133,9 +133,8 @@ impl Wire {
 }
 
 /// A `LocalLabel` refers to an identifier assigned to individual
-///
 /// Components or objects within a specific grouping on
-/// the same `[SchemaPage]`.
+/// the same schema page.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LocalLabel {
     /// The text displayed on the label.
@@ -427,7 +426,7 @@ impl Symbol {
         }
     }
 
-    ///get a property value by key
+    /// Get a property value by key
     pub fn property(&self, key: &str) -> String {
         self.props
             .iter()
@@ -440,6 +439,8 @@ impl Symbol {
             })
             .collect::<String>()
     }
+
+    /// Set a property value by key
     pub fn set_property(&mut self, key: &str, value: &str) {
         self.props.iter_mut().for_each(|p| {
             if p.key == key {
@@ -449,13 +450,13 @@ impl Symbol {
     }
 }
 
-///General functions for the schema.
+/// General functions for the schema.
 impl Schema {
     ///Create an empty schema.
     pub fn new(project: &str) -> Self {
         Self {
             project: project.to_string(),
-            version: String::from("0.0"),
+            version: String::from("20231120"),
             uuid: crate::uuid!(),
             generator: String::from("recad"),
             generator_version: None,
@@ -565,6 +566,48 @@ impl Schema {
             .collect::<Vec<u8>>()
             .first()
             .copied()
+    }
+
+    /// Generate the next power reference.
+    pub fn next_power(&self) -> String {
+        let max = self.items.iter().filter_map(|s| {
+            if let SchemaItem::Symbol(symbol) = s {
+                if symbol.property(el::PROPERTY_REFERENCE).starts_with("#PWR") {
+                    Some(symbol.property(el::PROPERTY_REFERENCE)[4..].parse::<u8>().unwrap())
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        }).max();
+
+        if let Some(max) = max {
+            format!("#PWR{:02}", max + 1)
+        } else {
+            "#PWR01".to_string()
+        }
+    }
+    
+    /// Generate the next power flag reference..
+    pub fn next_flag(&self) -> String {
+        let max = self.items.iter().filter_map(|s| {
+            if let SchemaItem::Symbol(symbol) = s {
+                if symbol.property(el::PROPERTY_REFERENCE).starts_with("#FLG") {
+                    Some(symbol.property(el::PROPERTY_REFERENCE)[4..].parse::<u8>().unwrap())
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        }).max();
+
+        if let Some(max) = max {
+            format!("#FLG{:02}", max + 1)
+        } else {
+            "#FLG01".to_string()
+        }
     }
 
     /// Get a library symbol by lib_id
