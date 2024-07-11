@@ -450,8 +450,9 @@ impl Symbol {
 ///General functions for the schema.
 impl Schema {
     ///Create an empty schema.
-    pub fn new() -> Self {
+    pub fn new(project: &str) -> Self {
         Self {
+            project: project.to_string(),
             version: String::from("0.0"),
             uuid: crate::uuid!(),
             generator: String::from("recad"),

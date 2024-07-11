@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use crate::{
     gr::{Pos, Pt, Pts},
     math::{self, pin_position},
-    schema::{GlobalLabel, Junction, LocalLabel, NoConnect, SchemaItem, Symbol, Wire},
+    schema::{GlobalLabel, Instance, Junction, LocalLabel, NoConnect, SchemaItem, Symbol, Wire},
     sexp::constants::el,
     Drawable, Drawer, Error, Plot, Schema,
 };
@@ -410,6 +410,16 @@ impl Drawer<Symbol> for Schema {
         }
 
         math::place_properties(&lib, &mut new_symbol);
+
+        //add the instances section
+        new_symbol.instances = vec![
+            Instance { 
+                project: self.project.to_string(), 
+                path: self.uuid.to_string(), 
+                reference: new_symbol.property(el::PROPERTY_REFERENCE), 
+                unit: new_symbol.unit,
+            }
+        ];
 
         //TODO the next pin should be pin 2
         if let Some(last_pos) = new_last_pos {

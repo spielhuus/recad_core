@@ -16,7 +16,7 @@ mod tests {
         fn draw_schema() {
             init();
 
-            let mut builder = Schema::new();
+            let mut builder = Schema::new("builder");
             builder.move_to(At::Pt(Pt { x: 50.8, y: 50.8 }));
             builder.draw(LocalLabel::new("Vin").attr(Attribute::Rotate(180.0))).unwrap();
             builder.draw(Wire::new().attr(Attribute::Direction(Direction::Right)).attr(Attribute::Length(4.0 * 2.54))).unwrap();
@@ -70,7 +70,7 @@ mod tests {
         fn draw_schema_left() {
             init();
 
-            let mut builder = Schema::new();
+            let mut builder = Schema::new("builder");
             builder.move_to(At::Pt(Pt { x: 50.8, y: 50.8 }));
             builder.draw(LocalLabel::new("Vin").attr(Attribute::Rotate(180.0))).unwrap();
             builder.draw(Wire::new().attr(Attribute::Direction(Direction::Right)).attr(Attribute::Length(4.0 * 2.54))).unwrap();

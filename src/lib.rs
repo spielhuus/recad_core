@@ -69,6 +69,10 @@ pub struct Circuit {
 #[derive(Debug, Default)]
 ///Define the `Schematic` file format.
 pub struct Schema {
+    /// The Project Title
+    /// This title serves as a reference for symbol instances throughout the project.
+    /// Typically, the title matches the file name.
+    pub project: String,
     /// The `version` defines the schematic version
     /// using the YYYYMMDD date format.
     pub version: String,
@@ -246,12 +250,7 @@ pub trait Drawer<T> {
 
 #[cfg(test)]
 mod tests {
-    use std::path::{Path, PathBuf};
-
-    use crate::{
-        schema::{SchemaItem, Symbol},
-        Schema,
-    };
+    use std::path::PathBuf;
 
     #[test]
     fn test_load_symbol() {
