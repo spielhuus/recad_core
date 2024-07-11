@@ -133,7 +133,8 @@ impl Wire {
 }
 
 /// A `LocalLabel` refers to an identifier assigned to individual
-/// components or objects within a specific grouping on
+///
+/// Components or objects within a specific grouping on
 /// the same `[SchemaPage]`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LocalLabel {
@@ -194,12 +195,24 @@ pub struct GlobalLabel {
 /// It's used for clarity in cases where there should be no path but
 /// one isn't explicitly shown. Proper usage ensures correct net
 /// connections, avoiding errors, and passes ERC checks.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct NoConnect {
     /// The X and Y coordinates of the no-connect within the schematic.
     pub pos: Pos,
     /// Universally unique identifier for the no-connect.
     pub uuid: String,
+    /// The drawer attributes of the no connect.
+    pub attrs: To,
+}
+
+impl NoConnect {
+    pub fn new() -> Self {
+        Self {
+            pos: Pos::default(),
+            uuid: crate::uuid!(),
+            attrs: To::new(),
+        }
+    }
 }
 
 ///A `HierarchicalSheet`  represents a nested or hierarchical
@@ -497,7 +510,7 @@ impl Schema {
             .iter()
             .filter_map(|s| match s {
                 SchemaItem::Symbol(s) => {
-                    if unit == s.unit && reference == s.property("Reference") {
+                    if unit == s.unit && reference == s.property(el::PROPERTY_REFERENCE) {
                         Some(s)
                     } else {
                         None

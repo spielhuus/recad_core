@@ -60,20 +60,21 @@ pub struct LibrarySymbol {
 }
 
 impl LibrarySymbol {
-    ///"UNIT" is an integer that identifies which unit the symbol represents. A "UNIT"
-    ///value of zero (0) indicates that the symbol is common to all units.
+    ///  The `unit` refers to a numerical identifier denoting the specific unit the symbol 
+    ///  represents. A `unit` value of zero (0) implies that the
+    ///  symbol is universal across all units.
     pub fn unit(&self) -> u8 {
         let splits = self.lib_id.split('_').collect::<Vec<&str>>();
         splits.get(splits.len() - 2).unwrap().parse::<u8>().unwrap()
     }
 
-    ///The "STYLE" indicates which body style the unit represents.
+    ///The `style` indicates which body style the unit represents.
     pub fn style(&self) -> u8 {
         let splits = self.lib_id.split('_').collect::<Vec<&str>>();
         splits.last().unwrap().parse::<u8>().unwrap()
     }
 
-    ///Get a Pin by the pin number
+    ///Get a `Pin` by the pin number
     pub fn pin(&self, number: &str) -> Option<&Pin> {
         for u in &self.units {
             for p in &u.pins {
@@ -85,7 +86,7 @@ impl LibrarySymbol {
         None
     }
     
-    ///Get a Pin by the pin number
+    ///Get the unit by the pin number
     pub fn pin_unit(&self, number: &str) -> Option<u8> {
         for u in &self.units {
             for p in &u.pins {

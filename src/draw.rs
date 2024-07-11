@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use crate::{
     gr::{Pos, Pt, Pts},
     math::{self, pin_position},
-    schema::{GlobalLabel, Junction, LocalLabel, SchemaItem, Symbol, Wire},
+    schema::{GlobalLabel, Junction, LocalLabel, NoConnect, SchemaItem, Symbol, Wire},
     sexp::constants::el,
     Drawable, Drawer, Error, Plot, Schema,
 };
@@ -428,5 +428,27 @@ impl Drawer<Symbol> for Schema {
         }
         self.items.push(SchemaItem::Symbol(new_symbol));
         Ok(())
+    }
+}
+
+impl Drawer<NoConnect> for Schema {
+    fn draw(&mut self, mut no_connect: NoConnect) -> Result<(), Error> {
+        let pt = if let Some(at) = no_connect.attrs.at() {
+            self.get_pt(&at)
+        } else {
+            self.get_pt(&self.last_pos)
+        };
+        no_connect.pos.x = pt.x;
+        no_connect.pos.y = pt.y;
+        self.items.push(SchemaItem::NoConnect(no_connect));
+        self.last_pos = At::Pt(pt);
+        Ok(())
+    }
+}
+
+impl Drawable<NoConnect> for NoConnect {
+    fn attr(mut self, attr: Attribute) -> NoConnect {
+        self.attrs.push(attr);
+        self
     }
 }

@@ -258,6 +258,7 @@ impl std::convert::From<&Sexp> for Result<NoConnect, Error> {
         Ok(NoConnect {
             pos: sexp.into(),
             uuid: error_if_none!(sexp.first(el::UUID), "uuid is mandatory")?,
+            attrs: To::new(),
         })
     }
 }
