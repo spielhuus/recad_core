@@ -2,7 +2,6 @@ use std::fmt::Display;
 
 use crate::{gr::{Effects, Pos, Property}, schema::Symbol, sexp::constants::el};
 
-
 ///The symbol token defines a symbol or sub-unit of a parent symbol
 #[derive(Debug, Clone)]
 pub struct LibrarySymbol {

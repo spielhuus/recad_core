@@ -166,6 +166,17 @@ impl SymbolLibrary {
                         if sym_name == t[1] {
                             let mut node: LibrarySymbol = Into::<Result<LibrarySymbol, Error>>::into(node)?;
                             node.lib_id = format!("{}:{}", t[0], t[1]);
+
+                            if let Some(extends) = &node.extends {
+                                if let Ok(mut ext_sym) = self.load(&format!("{}:{}", t.first().unwrap(), extends)) {
+                                    ext_sym.props.clone_from(&node.props);
+                                    ext_sym.lib_id = format!("{}:{}", t[0], t[1]);
+                                    return Ok(ext_sym);
+                                } else {
+                                    return Err(Error("lib_symbol".to_string(), format!("unable to find extend symbol {}", extends)))
+                                }
+                            }
+
                             return Ok(node);
                         }
                     }
@@ -231,3 +242,35 @@ pub trait Drawable<F> {
 pub trait Drawer<T> {
     fn draw(&mut self, item: T) -> Result<(), Error>;
 }
+
+
+#[cfg(test)]
+mod tests {
+    use std::path::{Path, PathBuf};
+
+    use crate::{
+        schema::{SchemaItem, Symbol},
+        Schema,
+    };
+
+    #[test]
+    fn test_load_symbol() {
+        let lib = super::SymbolLibrary {
+            pathlist: vec![PathBuf::from("/usr/share/kicad/symbols")]
+        };
+        let sym = lib.load("Amplifier_Operational:LM2904");
+        assert!(sym.is_ok());
+    }
+
+    #[test]
+    fn test_load_extends_symbol() {
+        let lib = super::SymbolLibrary {
+            pathlist: vec![PathBuf::from("/usr/share/kicad/symbols")]
+        };
+        let sym = lib.load("Amplifier_Operational:TL072");
+        assert!(sym.is_ok());
+        assert_eq!(3, sym.as_ref().unwrap().units.len());
+        assert_eq!("Amplifier_Operational:TL072", sym.unwrap().lib_id);
+    }
+}
+
