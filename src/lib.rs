@@ -152,7 +152,7 @@ use circuit::CircuitItem;
 use draw::{At, Attribute};
 use gr::Pt;
 use indexmap::IndexMap;
-use plot::{theme::Theme, Plotter};
+use plot::{theme::{Theme, Themes}, PlotCommand, Plotter};
 use schema::{Instance, SchemaItem};
 use sexp::{builder::Builder, constants::el, SexpValue};
 
@@ -220,6 +220,7 @@ impl SymbolLibrary {
 ///     Schema, Plot,
 ///     plot::{
 ///         Plotter,
+///         PlotCommand,
 ///         theme::*
 ///     },
 /// };
@@ -228,14 +229,14 @@ impl SymbolLibrary {
 /// let schema = Schema::load(path).unwrap();
 ///
 /// let mut svg = recad_core::plot::SvgPlotter::new();
-/// schema.plot(&mut svg, &Theme::from(Themes::Kicad2020)).unwrap();
+/// schema.plot(&mut svg, PlotCommand::default()).unwrap(); 
 ///
 /// let mut buffer = Vec::new();
 /// let res = svg.write(&mut buffer);
 /// assert!(res.is_ok());
 /// ```
 pub trait Plot {
-    fn plot(&self, plotter: &mut impl Plotter, theme: &Theme) -> Result<(), Error>;
+    fn plot(&self, plotter: &mut impl Plotter, command: PlotCommand) -> Result<(), Error>;
     fn move_to(&mut self, pt: At);
     fn get_pt(&self, at: &At) -> Pt;
 }

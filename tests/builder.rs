@@ -4,8 +4,7 @@ mod tests {
 
         use recad_core::{
             draw::{At, Attribute, Direction}, gr::Pt, plot::{
-                theme::{Theme, Themes},
-                Plotter, SvgPlotter,
+                theme::{Theme, Themes}, PlotCommand, Plotter, SvgPlotter
             }, schema::{Junction, LocalLabel, NoConnect, Symbol, Wire}, Drawable, Drawer, Plot, Schema
         };
         fn init() {
@@ -107,8 +106,7 @@ mod tests {
         
             let mut svg = SvgPlotter::new();
             builder
-                .plot(&mut svg, &Theme::from(Themes::Kicad2020))
-                .unwrap();
+                .plot(&mut svg, PlotCommand::new().theme(Themes::Kicad2020)).unwrap();
             let mut file = File::create("target/out/test_draw_opamp.svg").unwrap();
             svg.write(&mut file).unwrap();
 

@@ -54,9 +54,9 @@ pub struct TextBox {
     pub uuid: String,
 }
 
-///A junction represents a connection point where multiple wires
-///or components intersect, allowing electrical current to
-///flow between them.
+/// A junction represents a connection point where multiple wires
+/// or components intersect, allowing electrical current to
+/// flow between them.
 #[derive(Debug, Clone, Default)]
 pub struct Junction {
     /// `Pos` defines the X and Y coordinates of the junction.

@@ -6,8 +6,7 @@ use crate::{
     gr::{Arc, Circle, Color, GraphicItem, Polyline, Pt, Pts, Rect, Rectangle},
     math::{bbox::Bbox, pin_position, ToNdarray, Transform},
     plot::{
-        theme::{Style, Theme},
-        FontEffects, Paint, Plotter,
+        theme::{Style, Theme}, FontEffects, Paint, PlotCommand, Plotter
     },
     schema::SchemaItem,
     sexp::constants::el,
@@ -78,8 +77,11 @@ impl Plot for Schema {
         }
     }
 
-    fn plot(&self, plotter: &mut impl Plotter, theme: &Theme) -> Result<(), Error> {
+    fn plot(&self, plotter: &mut impl Plotter, command: PlotCommand) -> Result<(), Error> {
+ 
+        let theme = Theme::from(command.theme);
         let paper_size: (f32, f32) = self.paper.clone().into();
+
         plotter.set_view_box(Rect {
             start: Pt { x: 0.0, y: 0.0 },
             end: Pt {
@@ -135,16 +137,16 @@ impl Plot for Schema {
                             for g in &lib_symbol.graphics {
                                 match g {
                                     GraphicItem::Arc(a) => {
-                                        arc(plotter, &transform, a, &Style::Outline, theme);
+                                        arc(plotter, &transform, a, &Style::Outline, &theme);
                                     }
                                     GraphicItem::Polyline(p) => {
-                                        polyline(plotter, &transform, p, &Style::Outline, theme);
+                                        polyline(plotter, &transform, p, &Style::Outline, &theme);
                                     }
                                     GraphicItem::Rectangle(p) => {
-                                        rectangle(plotter, &transform, p, &Style::Outline, theme);
+                                        rectangle(plotter, &transform, p, &Style::Outline, &theme);
                                     }
                                     GraphicItem::Circle(c) => {
-                                        circle(plotter, &transform, c, &Style::Outline, theme);
+                                        circle(plotter, &transform, c, &Style::Outline, &theme);
                                     }
                                     GraphicItem::Curve(_) => todo!(),
                                     GraphicItem::Line(_) => todo!(),
@@ -163,7 +165,7 @@ impl Plot for Schema {
                             library.pin_names_offset,
                             library.power,
                             &Style::Outline,
-                            theme,
+                            &theme,
                         );
                     }
                 }

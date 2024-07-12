@@ -9,6 +9,7 @@ mod svg;
 pub mod theme;
 
 pub use svg::SvgPlotter;
+use theme::Themes;
 
 ///The paint for the plotter.
 #[derive(Clone)]
@@ -88,6 +89,72 @@ impl fmt::Display for LineCap {
             LineCap::Round => write!(f, "round"),
             LineCap::Square => write!(f, "square"),
         }
+    }
+}
+
+/// Configure the Plotter 
+pub struct PlotCommand {
+    pub border: bool,
+    pub theme: Themes,
+    pub scale: f32,
+    pub pages: Vec<u8>,
+    pub split: bool,
+}
+
+impl Default for PlotCommand {
+    fn default() -> Self {
+        PlotCommand {
+            border: false,
+            theme: Themes::Kicad2020,
+            scale: 1.0,
+            pages: Vec::new(),
+            split: false,
+        }
+    }
+}
+
+impl PlotCommand {
+    pub fn new() -> Self {
+        PlotCommand {
+            border: false,
+            theme: Themes::Kicad2020,
+            scale: 1.0,
+            pages: Vec::new(),
+            split: false,
+        }
+    }
+
+    /// This function, when invoked, enables the plotter to append a border and a title to visuals. Upon deactivation, 
+    /// it trims the visual to encompass solely its substance.
+    pub fn border(mut self, value: bool) -> Self {
+        self.border = value;
+        self
+    }
+    
+    /// This function sets the color theme for the plotter to interpret.
+    pub fn theme(mut self, theme: Themes) -> Self {
+        self.theme = theme;
+        self
+    }
+
+    /// This function allows you to adjust the dimensions of your visual content.
+    pub fn scale(mut self, scale: f32) -> Self {
+        self.scale = scale;
+        self
+    }
+
+    /// Selects the pages to plot; if the list is empty, all available pages will be plotted.
+    pub fn pages<T>(mut self, pages: T) -> Self
+    where
+        T: Into<Vec<u8>>,
+    {
+        self.pages = pages.into();
+        self
+    }
+
+    pub fn split(mut self, value: bool) -> Self {
+        self.split = value;
+        self
     }
 }
 
