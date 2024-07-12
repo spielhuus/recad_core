@@ -1,16 +1,18 @@
 use ndarray::{arr2, Array2, ArrayView, Axis};
 
 pub mod bbox;
-mod transform;
 pub mod fonts;
+mod transform;
 
-pub use transform::Transform;
 use bbox::Bbox;
+pub use transform::Transform;
 
 use crate::{
-    gr::{Pos, Pt, Pts, Rect},
+    draw::Direction,
+    gr::{Justify, Pos, Pt, Pts, Rect},
     schema,
-    symbols::{LibrarySymbol, Pin}, Schema,
+    symbols::Pin,
+    Schema,
 };
 
 pub trait ToNdarray<T, O> {
@@ -100,11 +102,28 @@ pub fn pin_position(symbol: &schema::Symbol, pin: &Pin) -> Pt {
 const PROP_SPACING: f32 = 1.25;
 const LINE_SPACING: f32 = 2.5;
 
+/// Place the properties of a symbol
+///
+/// We need to identify an edge on the symbol that doesn't have pins attached. The pin
+/// orientations can be computed based on the angle of the symbol and the pins.
+///
+/// They are as follows:
+///
+/// - 0.0 degrees: Left
+/// - 90.0 degrees: Up
+/// - 180.0 degrees: Right
+/// - 270.0 degrees: Down
+///
+/// For Symbols with a single pin, the pin direction is used to determine the
+/// direction of the properties.
+///
 pub fn place_properties(schema: &Schema, symbol: &mut schema::Symbol) {
-
     let bbox = symbol.outline(schema).expect("outline");
 
-    let pins = schema.library_symbol(&symbol.lib_id).unwrap().pins(symbol.unit);
+    let pins = schema
+        .library_symbol(&symbol.lib_id)
+        .unwrap()
+        .pins(symbol.unit);
     let pin_directions: Vec<f32> = pins
         .iter()
         .map(|p| {
@@ -118,7 +137,48 @@ pub fn place_properties(schema: &Schema, symbol: &mut schema::Symbol) {
 
     let vis_props = symbol.props.iter().filter(|p| p.visible()).count();
 
-    if !pin_directions.contains(&90.0) {
+    let direction = if pin_directions.len() == 1 {
+        if pin_directions.contains(&0.0) {
+            Direction::Left
+        } else if pin_directions.contains(&90.0) {
+            Direction::Up
+        } else if pin_directions.contains(&180.0) {
+            Direction::Right
+        } else if pin_directions.contains(&270.0) {
+            Direction::Down
+        } else {
+            panic!("will never happen, pin must have a direction")
+        }
+    } else if !pin_directions.contains(&0.0) {
+        Direction::Left
+    } else if !pin_directions.contains(&90.0) {
+        Direction::Up
+    } else if !pin_directions.contains(&180.0) {
+        Direction::Right
+    } else if !pin_directions.contains(&270.0) {
+        Direction::Down
+    } else {
+        panic!("all sides of the symbol have pins")
+    };
+
+    if direction == Direction::Right {
+        let mut start = symbol.pos.y - ((vis_props - 1) as f32 * LINE_SPACING / 2.0);
+        for prop in &mut symbol.props {
+            if !prop.visible() {
+                continue;
+            }
+            prop.pos.x = bbox.start.x - PROP_SPACING;
+            prop.pos.y = start;
+            prop.effects.justify.clear();
+            start += LINE_SPACING;
+            prop.effects.justify = vec![Justify::Right];
+            if symbol.pos.angle != 0.0 {
+                prop.pos.angle = 360.0 - symbol.pos.angle;
+            } else {
+                prop.pos.angle = 0.0;
+            }
+        }
+    } else if direction == Direction::Up {
         let mut start = bbox.start.y - PROP_SPACING - (vis_props - 1) as f32 * LINE_SPACING;
         for prop in &mut symbol.props {
             if !prop.visible() {
@@ -128,8 +188,9 @@ pub fn place_properties(schema: &Schema, symbol: &mut schema::Symbol) {
             prop.pos.y = start;
             prop.effects.justify.clear();
             start += LINE_SPACING;
+            prop.effects.justify = vec![];
         }
-    } else if !pin_directions.contains(&0.0) {
+    } else if direction == Direction::Left {
         let mut start = symbol.pos.y - ((vis_props - 1) as f32 * LINE_SPACING / 2.0);
         for prop in &mut symbol.props {
             if !prop.visible() {
@@ -139,26 +200,26 @@ pub fn place_properties(schema: &Schema, symbol: &mut schema::Symbol) {
             prop.pos.y = start;
             prop.effects.justify.clear();
             start += LINE_SPACING;
+            prop.effects.justify = vec![Justify::Left];
+            if symbol.pos.angle != 0.0 {
+                prop.pos.angle = 360.0 - symbol.pos.angle;
+            } else {
+                prop.pos.angle = 0.0;
+            }
         }
-    } else {
-        println!("OTHER DIRECTION::{}:{}: 0.0=({}), 90.0=({}), 180.0=({}), 270.0=({})",
-            symbol.property(crate::sexp::constants::el::PROPERTY_REFERENCE),
-            symbol.unit,
-            pin_directions.iter().filter(|d| **d == 0.0).count(),
-            pin_directions.iter().filter(|d| **d == 90.0).count(),
-            pin_directions.iter().filter(|d| **d == 180.0).count(),
-            pin_directions.iter().filter(|d| **d == 270.0).count());
+    } else if direction == Direction::Down {
+        let mut start = bbox.end.y + PROP_SPACING;
+        for prop in &mut symbol.props {
+            if !prop.visible() {
+                continue;
+            }
+            prop.pos.x = symbol.pos.x;
+            prop.pos.y = start;
+            prop.effects.justify.clear();
+            start += LINE_SPACING;
+            prop.effects.justify = vec![];
+        }
     }
-
-    //let pos: Array1<f32> = property.pos.ndarray();
-    //let transform = Transform::new()
-    //    .translation(Pt {
-    //        x: symbol.pos.x,
-    //        y: symbol.pos.y,
-    //    })
-    //    .rotation(symbol.pos.angle);
-    //let pos = transform.transform1(&pos);
-    //Pt::default()
 }
 
 #[cfg(test)]
@@ -182,14 +243,8 @@ mod tests {
                 x: 101.60,
                 y: 80.01,
             },
-            Pt {
-                x: 86.36,
-                y: 82.55,
-            },
-            Pt {
-                x: 86.36,
-                y: 77.47,
-            },
+            Pt { x: 86.36, y: 82.55 },
+            Pt { x: 86.36, y: 77.47 },
         ];
         assert_eq!(res[0], *positions.first().unwrap());
         assert_eq!(res[1], *positions.get(1).unwrap());

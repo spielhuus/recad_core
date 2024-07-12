@@ -489,7 +489,7 @@ impl Schema {
     ///use recad_core::Schema;
     ///use std::path::Path;
     ///
-    ///let path = Path::new("tests/summe.kicad_sch");
+    ///let path = Path::new("tests/summe/summe.kicad_sch");
     ///
     ///let schema = Schema::load(path);
     ///assert!(schema.is_ok());
@@ -510,7 +510,7 @@ impl Schema {
     /// use recad_core::Schema;
     /// use std::path::Path;
     ///
-    /// let path = Path::new("tests/summe.kicad_sch");
+    /// let path = Path::new("tests/summe/summe.kicad_sch");
     ///
     /// let schema = Schema::load(path).unwrap();
     /// let symbol = schema.symbol("U1", 1);
@@ -540,7 +540,7 @@ impl Schema {
     /// use recad_core::Schema;
     /// use std::path::Path;
     ///
-    /// let path = Path::new("tests/summe.kicad_sch");
+    /// let path = Path::new("tests/summe/summe.kicad_sch");
     ///
     /// let schema = Schema::load(path).unwrap();
     /// assert_eq!(Some(1), schema.pin_unit("U2", "1"));
@@ -616,7 +616,7 @@ impl Schema {
     /// use recad_core::Schema;
     /// use std::path::Path;
     ///
-    /// let path = Path::new("tests/summe.kicad_sch");
+    /// let path = Path::new("tests/summe/summe.kicad_sch");
     ///
     /// let schema = Schema::load(path).unwrap();
     /// let symbol = schema.library_symbol("Device:R");
@@ -838,13 +838,12 @@ mod tests {
     use std::path::Path;
 
     use crate::{
-        schema::{SchemaItem, Symbol},
-        Schema,
+        schema::{SchemaItem, Symbol}, sexp::constants::test::SCHEMA_SUMME, Schema
     };
 
     #[test]
     fn symbol_property() {
-        let schema = Schema::load(Path::new("tests/summe.kicad_sch")).unwrap();
+        let schema = Schema::load(Path::new(SCHEMA_SUMME)).unwrap();
         let symbol = schema
             .items
             .iter()
@@ -858,14 +857,14 @@ mod tests {
 
     #[test]
     fn get_symbol() {
-        let schema = Schema::load(Path::new("tests/summe.kicad_sch")).unwrap();
+        let schema = Schema::load(Path::new(SCHEMA_SUMME)).unwrap();
         let symbol = schema.symbol("U1", 1).unwrap();
         assert_eq!("U1", symbol.property("Reference"));
     }
 
     #[test]
     fn get_lib_symbol() {
-        let schema = Schema::load(Path::new("tests/summe.kicad_sch")).unwrap();
+        let schema = Schema::load(Path::new(SCHEMA_SUMME)).unwrap();
         let symbol = schema.symbol("U1", 1).unwrap();
         let lib_symbol = schema.library_symbol(&symbol.lib_id).unwrap();
         assert_eq!(
@@ -876,7 +875,7 @@ mod tests {
 
     #[test]
     fn get_lib_symbol_unit() {
-        let schema = Schema::load(Path::new("tests/summe.kicad_sch")).unwrap();
+        let schema = Schema::load(Path::new(SCHEMA_SUMME)).unwrap();
         let symbol = schema.symbol("U1", 1).unwrap();
         let lib_symbol = schema.library_symbol(&symbol.lib_id).unwrap();
 

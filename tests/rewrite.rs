@@ -6,18 +6,25 @@ mod tests {
         use similar::{ChangeTag, TextDiff};
         fn init() {
             let _ = env_logger::builder().is_test(true).try_init();
+            let path = Path::new("/tmp/recad");
+            if !path.exists() {
+                std::fs::create_dir_all(path).unwrap();
+            }
         }
 
         #[test]
         fn echo() {
             init();
 
-            let schema = recad_core::Schema::load(Path::new("tests/echo/echo.kicad_sch")).unwrap();
-            let mut file = std::fs::File::create("/tmp/summe.kicad_sch").unwrap();
+            let left = "tests/echo/echo.kicad_sch";
+            let right = "/tmp/recad/echo.kicad_sch";
+
+            let schema = recad_core::Schema::load(Path::new(left)).unwrap();
+            let mut file = std::fs::File::create(right).unwrap();
             schema.write(&mut file).unwrap();
 
-            let left = std::fs::read_to_string("tests/echo/echo.kicad_sch").unwrap();
-            let right = std::fs::read_to_string("/tmp/summe.kicad_sch").unwrap();
+            let left = std::fs::read_to_string(left).unwrap();
+            let right = std::fs::read_to_string(right).unwrap();
 
             let diff = TextDiff::from_lines(
                 left.as_str(),
@@ -53,12 +60,15 @@ mod tests {
         fn all_elements() {
             init();
 
-            let schema = recad_core::Schema::load(Path::new("tests/all_elements/all_elements.kicad_sch")).unwrap();
-            let mut file = std::fs::File::create("/tmp/all_elements.kicad_sch").unwrap();
+            let left = "tests/all_elements/all_elements.kicad_sch";
+            let right = "/tmp/recad/all_elements.kicad_sch";
+
+            let schema = recad_core::Schema::load(Path::new(left)).unwrap();
+            let mut file = std::fs::File::create(right).unwrap();
             schema.write(&mut file).unwrap();
 
-            let left = std::fs::read_to_string("tests/all_elements/all_elements.kicad_sch").unwrap();
-            let right = std::fs::read_to_string("/tmp/all_elements.kicad_sch").unwrap();
+            let left = std::fs::read_to_string(left).unwrap();
+            let right = std::fs::read_to_string(right).unwrap();
 
             let diff = TextDiff::from_lines(
                 left.as_str(),
@@ -84,4 +94,3 @@ mod tests {
         }
     }
 }
-

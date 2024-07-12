@@ -553,7 +553,8 @@ impl std::convert::From<&Sexp> for Symbol {
                 .map(|p| (p.get(0).unwrap(), p.first(el::UUID).unwrap()))
                 .collect(),
             instances: {
-                let instances = sexp.query(el::INSTANCES).next().expect("mandatory field");
+                let instances = sexp.query(el::INSTANCES).next()
+                    .unwrap_or_else(|| panic!("mandatory field 'instnaces' but not found in {:#?}", sexp));
                 let project = instances.query(el::PROJECT).next().unwrap();
                 let path = project.query(el::PATH).next().unwrap();
                 vec![Instance {

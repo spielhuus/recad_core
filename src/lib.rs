@@ -45,7 +45,7 @@ fn yes_or_no(input: bool) -> String {
     }
 }
 
-///The Error struct used for all error handling.
+/// The Error struct utilized for error handling across the system.
 #[derive(Debug)]
 pub struct Error(pub String, pub String);
 
@@ -224,14 +224,14 @@ impl SymbolLibrary {
 ///     },
 /// };
 ///
-/// let path = Path::new("tests/summe.kicad_sch");
+/// let path = Path::new("tests/summe/summe.kicad_sch");
 /// let schema = Schema::load(path).unwrap();
 ///
 /// let mut svg = recad_core::plot::SvgPlotter::new();
 /// schema.plot(&mut svg, &Theme::from(Themes::Kicad2020)).unwrap();
 ///
-/// let mut file = std::fs::File::create("/tmp/summe.svg").unwrap();
-/// let res = svg.write(&mut file);
+/// let mut buffer = Vec::new();
+/// let res = svg.write(&mut buffer);
 /// assert!(res.is_ok());
 /// ```
 pub trait Plot {
@@ -245,6 +245,11 @@ trait SexpWrite {
 }
 
 /// Access attributes of the drawable elements.
+///
+/// The `Drawable` trait enales you to set attributes of 
+/// elements. This is used for drawing schematic or pcb.
+/// The elements may not support all attributes. This
+/// is documented in the relevant type definitions.
 pub trait Drawable<F> {
     fn attr(self, attr: Attribute) -> F;
 }
@@ -253,7 +258,6 @@ pub trait Drawable<F> {
 pub trait Drawer<T> {
     fn draw(&mut self, item: T) -> Result<(), Error>;
 }
-
 
 #[cfg(test)]
 mod tests {

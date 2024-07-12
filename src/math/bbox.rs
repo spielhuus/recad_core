@@ -59,13 +59,11 @@ fn text(text: &str, pos: &Pos, effects: &Effects) -> Result<Rect, Error> {
             },
         }
     } else if pos.angle == 90.0 {
-        //let transform = Transform::new().rotation(pos.angle);
-        //dim = transform.transform1(&dim);
         Pt {
             x: if effects.justify.contains(&Justify::Right) {
-                pos.x
-            } else if effects.justify.contains(&Justify::Left) {
                 pos.x - dim[[0, 0]]
+            } else if effects.justify.contains(&Justify::Left) {
+                pos.x
             } else {
                 pos.x - dim[[0, 0]] / 2.0
             },
@@ -80,7 +78,6 @@ fn text(text: &str, pos: &Pos, effects: &Effects) -> Result<Rect, Error> {
     } else if pos.angle == 180.0 {
         let transform = Transform::new().rotation(pos.angle);
         dim = transform.transform(&dim);
-
         Pt {
             x: if effects.justify.contains(&Justify::Right) {
                 pos.x
@@ -100,9 +97,9 @@ fn text(text: &str, pos: &Pos, effects: &Effects) -> Result<Rect, Error> {
     } else if pos.angle == 270.0 {
         Pt {
             x: if effects.justify.contains(&Justify::Right) {
-                pos.x
-            } else if effects.justify.contains(&Justify::Left) {
                 pos.x - dim[[0, 0]]
+            } else if effects.justify.contains(&Justify::Left) {
+                pos.x
             } else {
                 pos.x - dim[[0, 0]] / 2.0
             },

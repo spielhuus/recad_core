@@ -4,7 +4,7 @@
 // ```
 // use sexp::{SexpParser, SexpTree};
 //
-// let doc = SexpParser::load("tests/summe.kicad_sch").unwrap();
+// let doc = SexpParser::load("tests/summe/summe.kicad_sch").unwrap();
 // let tree = SexpTree::from(doc.iter()).unwrap();
 // let root = tree.root().unwrap();
 //

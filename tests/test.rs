@@ -3,9 +3,20 @@ mod tests {
         use std::path::Path;
         use recad_core::{plot::theme::{Theme, Themes}, Plot, plot::Plotter};
 
+        const TESTS_DIR: &str = "target/out/tests";
+        const ECHO_IN: &str = "tests/echo/echo.kicad_sch";
+        const ECHO_OUT: &str = "target/out/echo.kicad_sch";
+        const ECHO_PLOT: &str = "target/out/echo.svg";
+        const SUMME_IN: &str = "tests/summe/summe.kicad_sch";
+        const SUMME_OUT: &str = "target/out/summe.kicad_sch";
+        const SUMME_PLOT: &str = "target/out/summe.svg";
+        const CP3_IN: &str = "tests/cp3/cp3.kicad_sch";
+        const CP3_OUT: &str = "target/out/cp3.kicad_sch";
+        const CP3_PLOT: &str = "target/out/cp3.svg";
+
         fn init() {
             let _ = env_logger::builder().is_test(true).try_init();
-            let path = Path::new("/tmp/recad");
+            let path = Path::new(TESTS_DIR);
             if !path.exists() {
                 std::fs::create_dir_all(path).unwrap();
             }
@@ -14,46 +25,40 @@ mod tests {
         #[test]
         fn load_echo() {
             init();
-            let schema = recad_core::Schema::load(Path::new("tests/echo/echo.kicad_sch")).unwrap();
-            let mut file = std::fs::File::create("/tmp/recad/echo.kicad_sch").unwrap();
+            let schema = recad_core::Schema::load(Path::new(ECHO_IN)).unwrap();
+            let mut file = std::fs::File::create(ECHO_OUT).unwrap();
             schema.write(&mut file).unwrap();
 
             let mut svg = recad_core::plot::SvgPlotter::new();
             schema.plot(&mut svg, &Theme::from(Themes::Kicad2020)).unwrap();
-            let mut file = std::fs::File::create("/tmp/recad/echo.svg").unwrap();
+            let mut file = std::fs::File::create(ECHO_PLOT).unwrap();
             svg.write(&mut file).unwrap();
         }
         
         #[test]
         fn load_summe() {
             init();
-            let schema = recad_core::Schema::load(Path::new("tests/summe.kicad_sch")).unwrap();
-            let mut file = std::fs::File::create("/tmp/recad/summe.kicad_sch").unwrap();
+            let schema = recad_core::Schema::load(Path::new(SUMME_IN)).unwrap();
+            let mut file = std::fs::File::create(SUMME_OUT).unwrap();
             schema.write(&mut file).unwrap();
 
             let mut svg = recad_core::plot::SvgPlotter::new();
             schema.plot(&mut svg, &Theme::from(Themes::Kicad2020)).unwrap();
-            let mut file = std::fs::File::create("/tmp/recad/summe.svg").unwrap();
+            let mut file = std::fs::File::create(SUMME_PLOT).unwrap();
             svg.write(&mut file).unwrap();
         }
 
         //#[test]
-        //fn load_pcb() {
+        //fn load_cp3() {
         //    init();
-        //    let pcb = recad_core::Pcb::load(Path::new("tests/echo/echo.kicad_pcb"));
+        //    let schema = recad_core::Schema::load(Path::new(CP3_IN)).unwrap();
+        //    let mut file = std::fs::File::create(CP3_OUT).unwrap();
+        //    schema.write(&mut file).unwrap();
         //
-        //    assert_eq!(254, pcb.segments.len());
-        //    assert_eq!(51, pcb.nets.len());
-        //    assert_eq!(70, pcb.footprints.len());
-        //    //let schema = crate::Schema::load(Path::new("/usr/share/kicad/demos/kit-dev-coldfire-xilinx_5213/kit-dev-coldfire-xilinx_5213.kicad_sch"));
-        //    //let schema = crate::schema::Schema::load(Path::new("/home/etienne/github/elektrophon/src/threeler/main/main.kicad_sch"));
-        //
-        //    let svg = recad_core::plot::SvgPlotter::new();
-        //    //let mut plotter = recad_core::plot::SchemaPlotter::new(schema, svg, recad_core::plot::theme::Themes::Kicad2020);
-        //    //let mut file = std::fs::File::create("/tmp/summe.svg").unwrap();
-        //    //plotter.plot();
-        //    //plotter.write(&mut file).unwrap();
-        //
+        //    let mut svg = recad_core::plot::SvgPlotter::new();
+        //    schema.plot(&mut svg, &Theme::from(Themes::Kicad2020)).unwrap();
+        //    let mut file = std::fs::File::create(CP3_PLOT).unwrap();
+        //    svg.write(&mut file).unwrap();
         //}
     }
 }

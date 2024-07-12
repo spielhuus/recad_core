@@ -399,11 +399,11 @@ impl<'a> std::fmt::Display for Netlist<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::gr::Pt;
+    use crate::{gr::Pt, sexp::constants::test::SCHEMA_SUMME};
 
     #[test]
     fn test_wires() {
-        let schema = crate::Schema::load(std::path::Path::new("tests/summe.kicad_sch")).unwrap();
+        let schema = crate::Schema::load(std::path::Path::new("tests/summe/summe.kicad_sch")).unwrap();
         let wires = super::Netlist::wires(&schema);
         let wire = wires
             .get(&Pt {
@@ -432,7 +432,7 @@ mod tests {
 
     #[test]
     fn test_get_wires() {
-        let schema = crate::Schema::load(std::path::Path::new("tests/summe.kicad_sch")).unwrap();
+        let schema = crate::Schema::load(std::path::Path::new(SCHEMA_SUMME)).unwrap();
         let wires = super::Netlist::wires(&schema);
         let mut visited = vec![];
         let wire = super::Netlist::get_wire(
@@ -465,7 +465,7 @@ mod tests {
 
     #[test]
     fn test_get_visited_wires() {
-        let schema = crate::Schema::load(std::path::Path::new("tests/summe.kicad_sch")).unwrap();
+        let schema = crate::Schema::load(std::path::Path::new("tests/summe/summe.kicad_sch")).unwrap();
         let wires = super::Netlist::wires(&schema);
         let mut visited = vec![Pt {
             x: 180.34,
@@ -497,7 +497,7 @@ mod tests {
 
     #[test]
     fn test_seek_wires() {
-        let schema = crate::Schema::load(std::path::Path::new("tests/summe.kicad_sch")).unwrap();
+        let schema = crate::Schema::load(std::path::Path::new(SCHEMA_SUMME)).unwrap();
         let wires = super::Netlist::wires(&schema);
         let mut visited = vec![];
         let wire = super::Netlist::seek_wire(
@@ -569,7 +569,7 @@ mod tests {
 
     #[test]
     fn check_positions() {
-        let schema = crate::Schema::load(std::path::Path::new("tests/summe.kicad_sch")).unwrap();
+        let schema = crate::Schema::load(std::path::Path::new(SCHEMA_SUMME)).unwrap();
         let netlist = super::Netlist::from(&schema).unwrap();
         assert_eq!(String::from("R33_2__U7_6__C9_2__R36_1"), netlist.netname(crate::gr::Pt { x: 207.01, y: 52.07 }).unwrap());
         assert_eq!(String::from("R7_2__R8_1__U4_3__RV3_2"), netlist.netname(crate::gr::Pt { x: 81.28, y: 102.87 }).unwrap());

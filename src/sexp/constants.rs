@@ -1,4 +1,9 @@
 
+
+pub mod test {
+    pub const SCHEMA_SUMME: &str = "tests/summe/summe.kicad_sch";
+}
+
 ///Constants for the element names.
 pub mod el {
     pub const ARC: &str = "arc";
