@@ -106,7 +106,7 @@ mod tests {
         
             let mut svg = SvgPlotter::new();
             builder
-                .plot(&mut svg, PlotCommand::new().theme(Themes::Kicad2020)).unwrap();
+                .plot(&mut svg, PlotCommand::new().theme(Some(Themes::Kicad2020))).unwrap();
             let mut file = File::create("target/out/test_draw_opamp.svg").unwrap();
             svg.write(&mut file).unwrap();
 

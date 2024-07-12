@@ -30,7 +30,7 @@ mod tests {
             schema.write(&mut file).unwrap();
 
             let mut svg = recad_core::plot::SvgPlotter::new();
-            schema.plot(&mut svg, PlotCommand::new().theme(Themes::Kicad2020)).unwrap();
+            schema.plot(&mut svg, PlotCommand::new().theme(Some(Themes::Kicad2020))).unwrap();
             let mut file = std::fs::File::create(ECHO_PLOT).unwrap();
             svg.write(&mut file).unwrap();
         }
@@ -43,7 +43,7 @@ mod tests {
             schema.write(&mut file).unwrap();
 
             let mut svg = recad_core::plot::SvgPlotter::new();
-            schema.plot(&mut svg, PlotCommand::new().theme(Themes::Kicad2020)).unwrap();
+            schema.plot(&mut svg, PlotCommand::new().theme(Some(Themes::Kicad2020))).unwrap();
             let mut file = std::fs::File::create(SUMME_PLOT).unwrap();
             svg.write(&mut file).unwrap();
         }

@@ -126,34 +126,44 @@ impl PlotCommand {
 
     /// This function, when invoked, enables the plotter to append a border and a title to visuals. Upon deactivation, 
     /// it trims the visual to encompass solely its substance.
-    pub fn border(mut self, value: bool) -> Self {
-        self.border = value;
+    pub fn border(mut self, value: Option<bool>) -> Self {
+        if let Some(value) = value {
+            self.border = value;
+        }
         self
     }
     
     /// This function sets the color theme for the plotter to interpret.
-    pub fn theme(mut self, theme: Themes) -> Self {
-        self.theme = theme;
+    pub fn theme(mut self, theme: Option<Themes>) -> Self {
+        if let Some(theme) = theme {
+            self.theme = theme;
+        }
         self
     }
 
     /// This function allows you to adjust the dimensions of your visual content.
-    pub fn scale(mut self, scale: f32) -> Self {
-        self.scale = scale;
+    pub fn scale(mut self, scale: Option<f32>) -> Self {
+        if let Some(scale) = scale {
+            self.scale = scale;
+        }
         self
     }
 
     /// Selects the pages to plot; if the list is empty, all available pages will be plotted.
-    pub fn pages<T>(mut self, pages: T) -> Self
+    pub fn pages<T>(mut self, pages: Option<T>) -> Self
     where
         T: Into<Vec<u8>>,
     {
-        self.pages = pages.into();
+        if let Some(pages) = pages {
+            self.pages = pages.into();
+        }
         self
     }
 
-    pub fn split(mut self, value: bool) -> Self {
-        self.split = value;
+    pub fn split(mut self, value: Option<bool>) -> Self {
+        if let Some(value) = value {
+            self.split = value;
+        }
         self
     }
 }
