@@ -142,6 +142,7 @@ impl PlotCommand {
     }
 
     /// This function allows you to adjust the dimensions of your visual content.
+    /// Expandability only occurs in the absence of borders.
     pub fn scale(mut self, scale: Option<f32>) -> Self {
         if let Some(scale) = scale {
             self.scale = scale;
@@ -173,7 +174,8 @@ pub trait Plotter {
 
     ///set the view box.
     fn set_view_box(&mut self, rect: Rect);
-
+    /// scale the image
+    fn scale(&mut self, scale: f32);
     ///Move the path cursor to position.
     fn move_to(&mut self, pt: Pt);
     ///Draw a line to position.

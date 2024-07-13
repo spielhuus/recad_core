@@ -12,6 +12,7 @@ use super::{FontEffects, Paint, Plotter};
 ///Plot a schema/pcb to a svg file.
 pub struct SvgPlotter {
     viewbox: Option<Rect>,
+    scale: f32,
     paths: Document,
     data: Data,
 }
@@ -21,6 +22,7 @@ impl SvgPlotter {
     pub fn new() -> Self {
         SvgPlotter {
             viewbox: None,
+            scale: 1.0,
             paths: Document::new(),
             data: Data::new(),
         }
@@ -31,9 +33,18 @@ impl Plotter for SvgPlotter {
     fn open(&self) {
         panic!("open not supported for SvgPlotter")
     }
+
     fn write<W: Write>(self, writer: &mut W) -> std::io::Result<()> {
         let mut document: Document = Document::new();
         if let Some(viewbox) = self.viewbox {
+            document = document.set(
+                "width",
+                format!("{}mm", crate::round((viewbox.end.x - viewbox.start.x) * self.scale)),
+            );
+            document = document.set(
+                "height",
+                format!("{}mm", crate::round((viewbox.end.y - viewbox.start.y) * self.scale)),
+            );
             document = document.set(
                 "viewBox",
                 (
@@ -56,6 +67,10 @@ impl Plotter for SvgPlotter {
 
     fn set_view_box(&mut self, rect: Rect) {
         self.viewbox = Some(rect)
+    }
+
+    fn scale(&mut self, scale: f32) {
+        self.scale = scale;
     }
 
     fn move_to(&mut self, pt: Pt) {
@@ -92,7 +107,8 @@ impl Plotter for SvgPlotter {
     }
 
     fn rect(&mut self, rect: Rect, stroke: Paint) {
-            self.paths.append(Rectangle::new()
+        self.paths.append(
+            Rectangle::new()
                 .set("x", format!("{:.2}", rect.start.x))
                 .set("y", format!("{:.2}", rect.start.y))
                 .set("width", format!("{:.2}", rect.end.x))
@@ -106,8 +122,8 @@ impl Plotter for SvgPlotter {
                     },
                 )
                 .set("stroke", stroke.color.to_string())
-                .set("stroke-width", format!("{:.2}", stroke.width))
-            );
+                .set("stroke-width", format!("{:.2}", stroke.width)),
+        );
     }
 
     fn arc(&mut self, center: Pt, radius: f32, stroke: Paint) {
@@ -147,7 +163,6 @@ impl Plotter for SvgPlotter {
             }
         }
 
-
         //for (i, p) in pts.0.iter().enumerate() {
         //    if i == 0 {
         //        self.move_to(*p);
@@ -167,11 +182,13 @@ impl Plotter for SvgPlotter {
             .set("fill", effects.color.to_string());
 
         if effects.angle != 0.0 {
-            t = t.set("transform", format!("translate({},{}) rotate({})", pt.x, pt.y, effects.angle));
+            t = t.set(
+                "transform",
+                format!("translate({},{}) rotate({})", pt.x, pt.y, effects.angle),
+            );
         } else {
             t = t.set("transform", format!("translate({},{})", pt.x, pt.y));
         }
         self.paths.append(t);
     }
-
 }

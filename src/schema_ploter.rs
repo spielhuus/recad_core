@@ -82,13 +82,6 @@ impl Plot for Schema {
         let theme = Theme::from(command.theme);
         let paper_size: (f32, f32) = self.paper.clone().into();
 
-        plotter.set_view_box(Rect {
-            start: Pt { x: 0.0, y: 0.0 },
-            end: Pt {
-                x: paper_size.0,
-                y: paper_size.1,
-            },
-        });
 
         for item in &self.items {
             match item {
@@ -315,6 +308,27 @@ impl Plot for Schema {
                 }
                 _ => log::error!("plotting item not supported: {:?}", item),
             }
+        }
+
+        // apply the settings to the drawing
+        plotter.scale(command.scale);
+        if command.border {
+            plotter.set_view_box(Rect {
+                start: Pt { x: 0.0, y: 0.0 },
+                end: Pt {
+                    x: paper_size.0,
+                    y: paper_size.1,
+                },
+            });
+        }  else {
+            let outline = self.outline()?;
+            plotter.set_view_box(Rect {
+                start: Pt { x: outline.start.x, y: outline.start.y },
+                end: Pt {
+                    x: outline.end.x,
+                    y: outline.end.y
+                },
+            });
         }
 
         if cfg!(debug_assertions) {
