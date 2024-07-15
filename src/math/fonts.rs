@@ -8,7 +8,7 @@ use rust_fontconfig::{FcFontCache, FcPattern};
 use crate::{gr, Error};
 
 
-static OSIFONT: &[u8] = include_bytes!("osifont-lgpl3fe.ttf");
+pub static OSIFONT: &[u8] = include_bytes!("osifont-lgpl3fe.ttf");
 
 pub fn dimension(text: &str, effects: &gr::Effects) -> Result<Array2<f32>, Error> {
     lazy_static! {

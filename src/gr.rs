@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use crate::sexp::constants::el;
+use crate::{plot::FontAnchor, sexp::constants::el};
 
 ///`Pos` sets the location (x, y) and orientation of an object.
 #[derive(Debug, Copy, Clone, Default)]
@@ -55,7 +55,7 @@ impl From<Pos> for Pt {
 
 impl fmt::Display for Pt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:.2}x{:.2}", self.x, self.y)
+        write!(f, "{:.2} x {:.2}", self.x, self.y)
     }
 }
 
@@ -300,13 +300,13 @@ pub struct Effects {
 }
 
 impl Effects {
-    pub fn anchor(&self) -> String {
+    pub fn anchor(&self) -> FontAnchor {
         if self.justify.contains(&Justify::Right) {
-            String::from("end")
+            FontAnchor::End
         } else if self.justify.contains(&Justify::Left) {
-            String::from("start")
+            FontAnchor::Start
         } else {
-            String::from("middle")
+            FontAnchor::Middle
         }
     }
     pub fn baseline(&self) -> String {

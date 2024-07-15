@@ -13,6 +13,7 @@ pub struct Transform {
     to: Pt,
     rotate: f32,
     mirror: Option<String>,
+    scale: Option<f32>,
 }
 
 lazy_static! {
@@ -32,6 +33,7 @@ impl Transform {
             to: Pt::default(),
             rotate: 0.0,
             mirror: None,
+            scale: None,
         }
     }
 
@@ -50,14 +52,33 @@ impl Transform {
         self
     }
 
+    pub fn scale(mut self, scale: f32) -> Self {
+        self.scale = Some(scale);
+        self
+    }
+
     pub fn transform(&self, points: &Array2<f32>) -> Array2<f32> {
+        //scale
+        let points = if let Some(scale) = self.scale {
+            let s = arr2(&[[scale, 0.0], [0.0, -scale]]);
+            points.dot(&s)
+        } else {
+            points.to_owned()
+        };
+
+        //reflect
         let points = if let Some(mirror) = &self.mirror {
             points.dot(MIRROR.get(mirror).unwrap())
         } else {
             points.dot(MIRROR.get(&String::new()).unwrap())
         };
+
+        //rotate
         let theta = self.rotate.to_radians();
         let rot = arr2(&[[theta.cos(), -theta.sin()], [theta.sin(), theta.cos()]]);
+
+
+        //translate
         let points: Array2<f32> = points.dot(&rot);
         &self.to.ndarray() + points
     }

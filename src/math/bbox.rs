@@ -1,7 +1,7 @@
 use ndarray::{arr2, Array, Array2};
 
 use crate::{
-    gr::{Effects, Justify, Pos, Property, Pt, Rect}, schema::{GlobalLabel, Junction, LocalLabel, NoConnect, Symbol, Wire}, sexp::constants::el, symbols::LibrarySymbol, Error, Schema
+    gr::{Effects, Justify, Pos, Property, Pt, Rect}, schema::{GlobalLabel, Junction, LocalLabel, NoConnect, Symbol, Text, Wire}, sexp::constants::el, symbols::LibrarySymbol, Error, Schema
 };
 
 use super::{pin_position, ToNdarray, Transform};
@@ -179,6 +179,12 @@ impl Bbox for LocalLabel {
 }
 
 impl Bbox for GlobalLabel {
+    fn outline(&self, _: &Schema) -> Result<Rect, Error> {
+        text(&self.text, &self.pos, &self.effects)
+    }
+}
+
+impl Bbox for Text {
     fn outline(&self, _: &Schema) -> Result<Rect, Error> {
         text(&self.text, &self.pos, &self.effects)
     }

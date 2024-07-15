@@ -6,9 +6,19 @@ pub enum Themes {
     Kicad2020,
 }
 
+impl From<String> for Themes {
+    fn from(str: String) -> Self {
+        match str.as_str() {
+            "Kicad2020" => Self::Kicad2020,
+            _ => Self::Kicad2020,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct Theme {
     colors: HashMap<Style, Color>,
+    fills: HashMap<Style, Color>,
     widths: HashMap<Style, f32>,
     font_sizes: HashMap<Style, (f32, f32)>,
 }
@@ -19,6 +29,11 @@ impl From<Themes> for Theme {
         let mut colors = HashMap::new();
         for c in COLORS {
             colors.insert(c.0, c.1);
+        }
+
+        let mut fills = HashMap::new();
+        for c in FILLS {
+            fills.insert(c.0, c.1);
         }
 
         let mut widths = HashMap::new();
@@ -33,6 +48,7 @@ impl From<Themes> for Theme {
 
         Self {
             colors,
+            fills,
             widths,
             font_sizes,
         }
@@ -66,6 +82,22 @@ impl Theme {
             color
         } else {
             *self.colors.get(&style).unwrap()
+        }
+    }
+
+    ///Get the fill color for the style.
+    ///
+    ///rule:
+    ///- when the color is rgba(0,0,0,0) it is None and the theme color is used
+    ///- otherwise take the in color
+    pub fn fill(&self, color: Option<Color>, style: Style) -> Color {
+        log::trace!("get fill color {:?} -> {:?}", color, style);
+        if let Some(color) = color {
+            color
+        } else if let Some(fill) = self.fills.get(&style) {
+            *fill
+        } else {
+            panic!("unknown fill {:?}", style);
         }
     }
 
@@ -130,17 +162,22 @@ impl std::fmt::Display for Style {
 }
 
 const COLORS: [(Style, Color); 5] = [
-    (Style::Wire, Color::Rgba(0, 255, 0, 1)),
-    (Style::NoConnect, Color::Rgba(255, 255, 0, 1)),
-    (Style::Junction, Color::Rgba(155, 255, 12, 1)),
-    (Style::Outline, Color::Rgba(0, 0, 0, 1)),
-    (Style::Property, Color::Rgba(5, 105, 12, 1)),
+    (Style::Wire, Color::Rgba(0, 150, 0, 255)),
+    (Style::NoConnect, Color::Rgba(0, 0, 132, 255)),
+    (Style::Junction, Color::Rgba(0, 150, 0, 255)),
+    (Style::Outline, Color::Rgba(132, 0, 0, 1)),
+    (Style::Property, Color::Rgba(5, 105, 12, 255)),
+];
+
+const FILLS: [(Style, Color); 2] = [
+    (Style::Background, Color::Rgba(255, 255, 194, 255)),
+    (Style::Outline, Color::Rgba(200, 98, 194, 255)),
 ];
 
 const WIDTHS: [(Style, f32); 4] = [
     (Style::Wire, 0.35),
     (Style::NoConnect, 0.25),
-    (Style::Junction, 0.25),
+    (Style::Junction, 0.1),
     (Style::Outline, 0.35),
 ];
 

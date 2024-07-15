@@ -225,14 +225,15 @@ impl SymbolLibrary {
 ///     },
 /// };
 ///
-/// let path = Path::new("tests/summe/summe.kicad_sch");
-/// let schema = Schema::load(path).unwrap();
+/// let input = Path::new("tests/summe/summe.kicad_sch");
+/// let output = Path::new("target/out/summe.svg");
+///
+/// let schema = Schema::load(input).unwrap();
 ///
 /// let mut svg = recad_core::plot::SvgPlotter::new();
 /// schema.plot(&mut svg, PlotCommand::default()).unwrap(); 
 ///
-/// let mut buffer = Vec::new();
-/// let res = svg.write(&mut buffer);
+/// let res = svg.save(output);
 /// assert!(res.is_ok());
 /// ```
 pub trait Plot {

@@ -179,8 +179,7 @@ mod tests {
                         .scale(Some(10.0))
                 )
                 .unwrap();
-            let mut file = File::create("target/out/test_draw_opamp.svg").unwrap();
-            svg.write(&mut file).unwrap();
+            svg.save(Path::new("target/out/test_draw_opamp.svg")).unwrap();
         }
     }
 }

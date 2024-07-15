@@ -2,7 +2,7 @@ use std::io::Write;
 
 use svg::{
     node::element::{path::Data, Circle, Path, Rectangle, Text},
-    write as svgwrite, Document, Node,
+    save as svgsave, Document, Node,
 };
 
 use crate::gr::{Color, Pt, Pts, Rect};
@@ -34,7 +34,7 @@ impl Plotter for SvgPlotter {
         panic!("open not supported for SvgPlotter")
     }
 
-    fn write<W: Write>(self, writer: &mut W) -> std::io::Result<()> {
+    fn save(self, path: &std::path::Path) -> std::io::Result<()> {
         let mut document: Document = Document::new();
         if let Some(viewbox) = self.viewbox {
             document = document.set(
@@ -61,7 +61,7 @@ impl Plotter for SvgPlotter {
         //}
 
         document.append(self.paths);
-        svgwrite(writer, &document).unwrap();
+        svgsave(path, &document).unwrap();
         Ok(())
     }
 
@@ -175,7 +175,7 @@ impl Plotter for SvgPlotter {
 
     fn text(&mut self, text: &str, pt: Pt, effects: FontEffects) {
         let mut t = Text::new(text)
-            .set("text-anchor", effects.anchor)
+            .set("text-anchor", effects.anchor.to_string())
             .set("dominant-baseline", effects.baseline)
             .set("font-family", effects.face)
             .set("font-size", format!("{}pt", effects.size))

@@ -1,13 +1,22 @@
 //!Plot the recad drawings.
-use std::{fmt, io::Write};
+use std::{fmt, path::Path};
 
-use crate::
-    gr::{Color, Pt, Pts, Rect}
-;
+use crate::{
+    gr::{Color, Pt, Pts, Rect},
+    math::{ToNdarray, Transform},
+};
 
+mod femtovg;
+mod raqote_plotter;
+mod tiny_skia_plotter;
 mod svg;
+mod text;
 pub mod theme;
 
+
+pub use femtovg::FemtoVgPlotter;
+pub use raqote_plotter::RaqotePlotter;
+pub use tiny_skia_plotter::TinySkiaPlotter;
 pub use svg::SvgPlotter;
 use theme::Themes;
 
@@ -64,10 +73,29 @@ impl Paint {
     }
 }
 
-///The fot effects for the drawings.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum FontAnchor {
+    Start,
+    End,
+    Middle,
+}
+
+impl fmt::Display for FontAnchor {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            FontAnchor::Start => write!(f, "start"),
+            FontAnchor::End => write!(f, "end"),
+            FontAnchor::Middle => write!(f, "middle"),
+        }
+    }
+}
+
+
+///The font effects for the drawings.
+#[derive(Clone)]
 pub struct FontEffects {
     pub angle: f32,
-    pub anchor: String,
+    pub anchor: FontAnchor,
     pub baseline: String,
     pub face: String,
     pub size: f32,
@@ -92,7 +120,7 @@ impl fmt::Display for LineCap {
     }
 }
 
-/// Configure the Plotter 
+/// Configure the Plotter
 pub struct PlotCommand {
     pub border: bool,
     pub theme: Themes,
@@ -124,7 +152,7 @@ impl PlotCommand {
         }
     }
 
-    /// This function, when invoked, enables the plotter to append a border and a title to visuals. Upon deactivation, 
+    /// This function, when invoked, enables the plotter to append a border and a title to visuals. Upon deactivation,
     /// it trims the visual to encompass solely its substance.
     pub fn border(mut self, value: Option<bool>) -> Self {
         if let Some(value) = value {
@@ -132,7 +160,7 @@ impl PlotCommand {
         }
         self
     }
-    
+
     /// This function sets the color theme for the plotter to interpret.
     pub fn theme(mut self, theme: Option<Themes>) -> Self {
         if let Some(theme) = theme {
@@ -194,7 +222,164 @@ pub trait Plotter {
     ///Draw a polyline with the given Pts.
     fn polyline(&mut self, pts: Pts, stroke: Paint);
 
-    ///Write the result to a Writer.
-    fn write<W: Write>(self, writer: &mut W) -> std::io::Result<()>;
+    /// Save the image to a path.
+    fn save(self, path: &Path) -> std::io::Result<()>;
 }
 
+pub enum PlotterNodes {
+    MoveTo(Pt),
+    LineTo(Pt),
+    Close,
+    Stroke(Paint),
+    Rect {
+        rect: Rect,
+        stroke: Paint,
+    },
+    Arc {
+        center: Pt,
+        radius: f32,
+        stroke: Paint,
+    },
+    Circle {
+        center: Pt,
+        radius: f32,
+        stroke: Paint,
+    },
+    Text {
+        text: String,
+        pt: Pt,
+        effects: FontEffects,
+    },
+}
+
+/// Stores events from plotter sources for efficient access.
+///
+/// The event stream with callback functions employed in recad may not be optimal for working with plotter
+/// libraries, as they often leverage implementations based on the builder pattern. This necessitates the
+/// ability to manipulate variables, which can prove challenging when the variable is a struct member due
+/// to its mutable nature. The proposed implementation will cache all events and provide them as an
+/// iterator for easier access and manipulation.
+///
+/// TODO code example
+pub struct PlotterImpl {
+    items: Vec<PlotterNodes>,
+}
+
+impl PlotterImpl {
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
+        PlotterImpl { items: Vec::new() }
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<PlotterNodes> {
+        self.items.iter()
+    }
+
+    pub fn scale(&mut self, scale: f32) {
+        let transform = Transform::new().scale(scale);
+        self.items = self.items.iter().map(|item| match item {
+            PlotterNodes::MoveTo(pt) => {
+                PlotterNodes::MoveTo(transform.transform(&pt.ndarray()).ndarray())
+            }
+            PlotterNodes::LineTo(pt) => {
+                PlotterNodes::LineTo(transform.transform(&pt.ndarray()).ndarray())
+            }
+            PlotterNodes::Close => PlotterNodes::Close,
+            PlotterNodes::Stroke(stroke) => PlotterNodes::Stroke(stroke.clone()),
+            PlotterNodes::Rect { rect, stroke } => PlotterNodes::Rect {
+                rect: Rect {
+                    start: transform.transform(&rect.start.ndarray()).ndarray(),
+                    end: transform.transform(&rect.end.ndarray()).ndarray(),
+                },
+                stroke: stroke.clone(),
+            },
+            PlotterNodes::Arc {
+                center,
+                radius,
+                stroke,
+            } => PlotterNodes::Arc {
+                center: transform.transform(&center.ndarray()).ndarray(),
+                radius: radius * scale,
+                stroke: stroke.clone(),
+            },
+            PlotterNodes::Circle {
+                center,
+                radius,
+                stroke,
+            } => PlotterNodes::Circle {
+                center: transform.transform(&center.ndarray()).ndarray(),
+                radius: radius * scale,
+                stroke: stroke.clone(),
+            },
+            PlotterNodes::Text { text, pt, effects } => PlotterNodes::Text {
+                text: text.clone(), 
+                pt: transform.transform(&pt.ndarray()).ndarray(),
+                effects: effects.clone(),
+            },
+        }).collect::<Vec<PlotterNodes>>();
+    }
+}
+
+impl Plotter for PlotterImpl {
+    fn open(&self) {}
+    fn set_view_box(&mut self, _: Rect) {}
+    fn scale(&mut self, _: f32) {}
+    fn save(self, _: &Path) -> std::io::Result<()> { Ok(()) }
+
+    fn move_to(&mut self, pt: Pt) {
+        self.items.push(PlotterNodes::MoveTo(pt));
+    }
+
+    fn line_to(&mut self, pt: Pt) {
+        self.items.push(PlotterNodes::LineTo(pt));
+    }
+
+    fn close(&mut self) {
+        self.items.push(PlotterNodes::Close);
+    }
+
+    fn stroke(&mut self, stroke: Paint) {
+        self.items.push(PlotterNodes::Stroke(stroke));
+    }
+
+    fn rect(&mut self, rect: Rect, stroke: Paint) {
+        self.items.push(PlotterNodes::Rect { rect, stroke });
+    }
+
+    fn arc(&mut self, center: Pt, radius: f32, stroke: Paint) {
+        self.items.push(PlotterNodes::Arc {
+            center,
+            radius,
+            stroke,
+        });
+    }
+
+    fn circle(&mut self, center: Pt, radius: f32, stroke: Paint) {
+        self.items.push(PlotterNodes::Circle {
+            center,
+            radius,
+            stroke,
+        });
+    }
+
+    fn text(&mut self, text: &str, pt: Pt, effects: FontEffects) {
+        self.items.push(PlotterNodes::Text {
+            text: text.to_string(),
+            pt,
+            effects,
+        });
+    }
+
+    fn polyline(&mut self, pts: Pts, stroke: Paint) {
+        let mut first: bool = true;
+        for pos in pts.0 {
+            if first {
+                self.move_to(pos);
+                first = false;
+            } else {
+                self.line_to(pos);
+            }
+        }
+        self.stroke(stroke);
+    }
+}

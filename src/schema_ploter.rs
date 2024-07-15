@@ -6,7 +6,7 @@ use crate::{
     gr::{Arc, Circle, Color, GraphicItem, Polyline, Pt, Pts, Rect, Rectangle},
     math::{bbox::Bbox, pin_position, ToNdarray, Transform},
     plot::{
-        theme::{Style, Theme}, FontEffects, Paint, PlotCommand, Plotter
+        theme::{Style, Theme}, FontAnchor, FontEffects, Paint, PlotCommand, Plotter
     },
     schema::SchemaItem,
     sexp::constants::el,
@@ -29,16 +29,13 @@ macro_rules! outline {
     ($self:expr, $item:expr, $plotter:expr) => {
         if cfg!(debug_assertions) {
             let outline = $item.outline(&$self)?;
-            $plotter.rect(
-                Rect {
-                    start: outline.start,
-                    end: Pt {
-                        x: outline.end.x - outline.start.x,
-                        y: outline.end.y - outline.start.y,
-                    },
-                },
-                Paint::outline(),
-            );
+            $plotter.move_to(outline.start);
+            $plotter.line_to(Pt { x: outline.end.x, y: outline.start.y });
+            $plotter.line_to(outline.end);
+            $plotter.line_to(Pt { x: outline.start.x, y: outline.end.y });
+            $plotter.line_to(outline.start);
+            $plotter.close();
+            $plotter.stroke(Paint::outline());
         }
     };
 }
@@ -82,7 +79,6 @@ impl Plot for Schema {
         let theme = Theme::from(command.theme);
         let paper_size: (f32, f32) = self.paper.clone().into();
 
-
         for item in &self.items {
             match item {
                 SchemaItem::Symbol(symbol) => {
@@ -98,8 +94,8 @@ impl Plot for Schema {
                                     angle: if symbol.pos.angle + prop.pos.angle >= 360.0 {
                                         symbol.pos.angle + prop.pos.angle - 360.0
                                     } else if symbol.pos.angle + prop.pos.angle == 180.0 {
-                                        if anchor == *"end" {
-                                            anchor = String::from("start");
+                                        if anchor == FontAnchor::End {
+                                            anchor = FontAnchor::Start;
                                         }
                                         0.0
                                     } else if symbol.pos.angle + prop.pos.angle == 90.0 {
@@ -219,7 +215,7 @@ impl Plot for Schema {
                         },
                         Paint {
                             color: theme.color(None, Style::Junction),
-                            fill: None,
+                            fill: Some(theme.color(None, Style::Junction)),
                             width: theme.width(0.0, Style::Junction),
                         },
                     );
@@ -305,7 +301,22 @@ impl Plot for Schema {
                     //        ),
                     //    ));
                     //}
-                }
+                },
+                SchemaItem::Text(text) => {
+                    outline!(self, text, plotter);
+                    plotter.text(
+                        &text.text,
+                        text.pos.into(),
+                        FontEffects {
+                            angle: text.pos.angle,
+                            anchor: text.effects.anchor(),
+                            baseline: text.effects.baseline(),
+                            face: theme.face(), //TODO label.effects.font.face.clone().unwrap(),
+                            size: theme.font_size(text.effects.font.size, Style::Label).0,
+                            color: theme.color(text.effects.font.color, Style::Property),
+                        },
+                    );
+                },
                 _ => log::error!("plotting item not supported: {:?}", item),
             }
         }
@@ -364,10 +375,16 @@ fn polyline(
             plotter.line_to(Pt { x: p[0], y: p[1] });
         }
     }
+
     plotter.stroke(Paint {
-        color: theme.color(None, style.clone()),
-        fill: None,
-        width: theme.width(0.0, style.clone()),
+        color: theme.color(poly.stroke.color, style.clone()),
+        fill: match poly.fill {
+            crate::gr::FillType::None => None,
+            crate::gr::FillType::Background => Some(theme.fill(None, Style::Background)),
+            crate::gr::FillType::Outline => Some(theme.fill(None, Style::Outline)),
+            crate::gr::FillType::Color(color) => Some(color),
+        },
+        width: theme.width(poly.stroke.width, style.clone()),
     });
 }
 
@@ -549,7 +566,7 @@ fn pin<P: Plotter>(
             pos,
             FontEffects {
                 angle: 0.0,
-                anchor: String::from("middle"),
+                anchor: FontAnchor::Middle,
                 baseline: String::from("middle"),
                 face: String::from("osifont"),
                 size: 1.25,
@@ -563,10 +580,10 @@ fn pin<P: Plotter>(
             return;
         };
         let (to, align) = match pin.pos.angle {
-            0.0 => (Pt { x: offset, y: 0.0 }, String::from("left")),
-            90.0 => (Pt { x: 0.0, y: offset }, String::from("left")),
-            180.0 => (Pt { x: -offset, y: 0.0 }, String::from("right")),
-            270.0 => (Pt { x: 0.0, y: offset }, String::from("right")),
+            0.0 => (Pt { x: offset, y: 0.0 }, FontAnchor::Start),
+            90.0 => (Pt { x: 0.0, y: offset }, FontAnchor::Start),
+            180.0 => (Pt { x: -offset, y: 0.0 }, FontAnchor::End),
+            270.0 => (Pt { x: 0.0, y: offset }, FontAnchor::End),
             _ => {
                 panic!("pin angle: {}, not supported", pin.pos.angle);
             }
