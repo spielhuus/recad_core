@@ -1,7 +1,7 @@
 use ndarray::{arr2, Array, Array2};
 
 use crate::{
-    gr::{Effects, Justify, Pos, Property, Pt, Rect}, schema::{GlobalLabel, Junction, LocalLabel, NoConnect, Symbol, Text, Wire}, sexp::constants::el, symbols::LibrarySymbol, Error, Schema
+    gr::{Effects, Justify, Pos, Property, Pt, Rect}, schema::{GlobalLabel, Junction, LocalLabel, NoConnect, Symbol, Text, Wire}, sexp::constants::el, Error, Schema
 };
 
 use super::{pin_position, ToNdarray, Transform};

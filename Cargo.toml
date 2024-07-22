@@ -49,3 +49,7 @@ path = "examples/raqote_plt.rs"
 [[examples]]
 name = "tiny_skia_plt"
 path = "examples/tiny_skia_plt.rs"
+
+[[examples]]
+name = "svg_plt"
+path = "examples/svg_plt.rs"

@@ -126,6 +126,8 @@ pub enum Style {
     Outline,
     Property,
     Label,
+    PinName,
+    PinNumber,
     Todo,
 }
 
@@ -155,17 +157,21 @@ impl std::fmt::Display for Style {
             Self::Outline => "outline",
             Self::Property => el::PROPERTY,
             Self::Label => "label",
+            Self::PinName => "pinname",
+            Self::PinNumber => "pinnumber",
             Self::Todo => "todo",
         };
         write!(f, "{}", s)
     }
 }
 
-const COLORS: [(Style, Color); 5] = [
+const COLORS: [(Style, Color); 7] = [
     (Style::Wire, Color::Rgba(0, 150, 0, 255)),
     (Style::NoConnect, Color::Rgba(0, 0, 132, 255)),
     (Style::Junction, Color::Rgba(0, 150, 0, 255)),
-    (Style::Outline, Color::Rgba(132, 0, 0, 1)),
+    (Style::Outline, Color::Rgba(132, 0, 0, 255)),
+    (Style::PinName, Color::Rgba(132, 0, 0, 255)),
+    (Style::PinNumber, Color::Rgba(132, 0, 0, 255)),
     (Style::Property, Color::Rgba(5, 105, 12, 255)),
 ];
 
@@ -181,7 +187,9 @@ const WIDTHS: [(Style, f32); 4] = [
     (Style::Outline, 0.35),
 ];
 
-const FONT_SIZES: [(Style, (f32, f32)); 2] = [
+const FONT_SIZES: [(Style, (f32, f32)); 4] = [
     (Style::Property, (1.75, 1.75)),
+    (Style::PinNumber, (0.25, 0.25)),
+    (Style::PinName, (0.35, 0.35)),
     (Style::Label, (1.75, 1.75)),
 ];

@@ -2,3 +2,10 @@
 [![Deploy](https://github.com/spielhuus/recad_core/actions/workflows/rust.yml/badge.svg)](https://github.com/spielhuus/recad_core/actions/workflows/rust.yml)
 
 # `recad`
+
+
+
+# TODO
+
+- create a Rect constructor that normalizes the input.
+

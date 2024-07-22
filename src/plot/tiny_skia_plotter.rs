@@ -1,20 +1,21 @@
-use fontdue::layout::{CoordinateSystem, HorizontalAlign, Layout, LayoutSettings, TextStyle};
+use std::{fs::File, io::Write};
+
 use tiny_skia::{BlendMode, FillRule, Pixmap};
 
 use crate::{
-    gr::{Color, Pt, Pts, Rect},
-    math::fonts::OSIFONT,
+    gr::{Color, Effects, Pos, Pt, Pts, Rect},
+    math::fonts::rasterize,
 };
 
-use super::{text::load_font, FontEffects, Paint, Plotter, PlotterImpl};
+use super::{Paint, Plotter, PlotterImpl};
 
-const SCALE: f32 = 25.4 * 0.72;
+pub const SCALE: f32 = 25.4 * 0.72;
 
 fn to_color(color: &Color) -> tiny_skia::Color {
     let (r, g, b, a) = match color {
         Color::None => todo!(),
         Color::Rgb(r, g, b) => (*r, *g, *b, 255),
-        Color::Rgba(r, g, b, a) => (*r, *g, *b, 255),
+        Color::Rgba(r, g, b, a) => (*r, *g, *b, *a),
     };
     tiny_skia::Color::from_rgba8(r, g, b, a)
 }
@@ -73,14 +74,21 @@ impl Plotter for TinySkiaPlotter {
         panic!("open not supported for TinySkiaPlotter")
     }
 
-    fn save(mut self, path: &std::path::Path) -> std::io::Result<()> {
+    fn save(self, path: &std::path::Path) -> std::io::Result<()> {
+        let mut buffer: Vec<u8> = Vec::new();
+        self.write(&mut buffer)?;
+        let mut file = File::create(path)?;
+        file.write_all(buffer.as_slice())
+    }
+
+    fn write<W: std::io::Write>(mut self, writer: &mut W) -> std::io::Result<()> {
         let mut paint = tiny_skia::Paint::default();
         paint.set_color_rgba8(0, 127, 0, 200);
         paint.anti_alias = true;
 
-        let mut dt = if let Some(viewbox) = self.viewbox {
+        let mut dt = if let Some(viewbox) = &self.viewbox {
             tiny_skia::Pixmap::new(
-                (viewbox.end.x * SCALE) as u32,
+               (viewbox.end.x * SCALE) as u32,
                 (viewbox.end.y * SCALE) as u32,
             )
             .unwrap()
@@ -127,70 +135,89 @@ impl Plotter for TinySkiaPlotter {
                     }
                 }
                 super::PlotterNodes::Arc {
-                    center,
-                    radius,
+                    start,
+                    mid,
+                    end,
                     stroke,
                 } => {
-                    //pb.arc(center.x, center.y, *radius, 0.0, std::f32::consts::PI);
-                    let path = pb.finish();
-                    //do_stroke!(dt, &path, stroke);
-                    pb = tiny_skia::PathBuilder::new();
+
+
+
+                    //let center = center();
+                    //
+                    let mut path =
+                        tiny_skia::PathBuilder::new();
+                    
+                    let ctrl = calculate_control_point(*start, *end, *mid);
+
+
+                    path.move_to(start.x, start.y);
+                    path.cubic_to(ctrl.x, ctrl.y, mid.x, mid.y, end.x, end.y);
+
+                    //
+                    // let segments = 100; // Number of segments to approximate the arc
+                    //
+                    //// Add the starting point
+                    //path.move_to(
+                    //    cx + radius * start_angle.cos(),
+                    //    cy + radius * start_angle.sin(),
+                    //);
+                    //
+                    //// Compute the points of the arc
+                    //for i in 0..=segments {
+                    //    let angle = start_angle + sweep_angle * (i as f32 / segments as f32);
+                    //    let x = cx + radius * angle.cos();
+                    //    let y = cy + radius * angle.sin();
+                    //    path_builder.line_to(x, y);
+                    //}
+
+
+                    //path.move_to(start.x, start.y);
+                    //path.quad_to(mid.x, mid.y, end.x, end.y);
+                    let path = path.finish().unwrap();
+                    if let Some(fill) = stroke.fill {
+                        do_fill!(dt, &path, fill);
+                    }
+                    do_stroke!(dt, &path, stroke);
+
+
+
+                    let path =
+                        tiny_skia::PathBuilder::from_circle(start.x, start.y, 0.1).unwrap();
+                    do_fill!(dt, &path, Color::blue());
+                    do_stroke!(dt, &path, Paint::blue());
+                    let path =
+                        tiny_skia::PathBuilder::from_circle(mid.x, mid.y, 0.1).unwrap();
+                    do_fill!(dt, &path, Color::green());
+                    do_stroke!(dt, &path, Paint::green());
+                    let path =
+                        tiny_skia::PathBuilder::from_circle(end.x, end.y, 0.1).unwrap();
+                    do_fill!(dt, &path, Color::red());
+                    do_stroke!(dt, &path, Paint::red());
+
+
                 }
                 super::PlotterNodes::Circle {
                     center,
                     radius,
                     stroke,
                 } => {
-                    let path =
+                   let path =
                         tiny_skia::PathBuilder::from_circle(center.x, center.y, *radius).unwrap();
                     if let Some(fill) = stroke.fill {
                         do_fill!(dt, &path, fill);
                     }
                     do_stroke!(dt, &path, stroke);
                 }
-                super::PlotterNodes::Text { text, pt, effects } => {
-                    let font = match load_font() {
-                        Ok(font) => font,
-                        Err(e) => return Err(std::io::Error::new(std::io::ErrorKind::Other, e)),
-                    };
-
-                    let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
-                    layout.reset(&LayoutSettings {
-                        x: pt.x,
-                        y: pt.y,
-                        horizontal_align: match effects.anchor {
-                            super::FontAnchor::Start => HorizontalAlign::Left,
-                            super::FontAnchor::End => HorizontalAlign::Right,
-                            super::FontAnchor::Middle => HorizontalAlign::Center,
-                        },
-                        //vertical_align: todo!(),
-                        ..Default::default()
-                    });
-                    layout.append(&[font.clone()], &TextStyle::new(text, effects.size * 1.3333 * SCALE, 0));
-
-                    let (r, g, b) = match effects.color {
-                        Color::None => (255, 255, 255),
-                        Color::Rgb(r, g, b) => (r, g, b),
-                        Color::Rgba(r, g, b, _) => (r, g, b),
-                    };
-
-                    for glyph in layout.glyphs() {
-                        let mut buffer = vec![];
-                        let (metrics, coverage) = font.rasterize_indexed(glyph.key.glyph_index, glyph.key.px);
-                        for lightness in coverage.into_iter() {
-                            buffer.push(r);
-                            buffer.push(g);
-                            buffer.push(b);
-                            buffer.push(lightness);
-                        }
-                        if metrics.width == 0 {
-                            break;
-                        }
-                        let mut pixmap = Pixmap::new(metrics.width as u32, metrics.height as u32).unwrap();
-                        pixmap.data_mut().copy_from_slice(&buffer);
+                super::PlotterNodes::Text { text, pos, effects } => {
+                    let glyphs = rasterize(text, pos, effects).unwrap();
+                    for g in glyphs { 
+                        //TODO align
+                        let mut pixmap = Pixmap::new(g.width, g.height).unwrap();
+                        pixmap.data_mut().copy_from_slice(&g.data);
                         dt.draw_pixmap(
-                            glyph.x as i32,
-                            glyph.y as i32,
+                            g.x as i32,
+                            g.y as i32,
                             pixmap.as_ref(),
                             &tiny_skia::PixmapPaint {
                                 blend_mode: BlendMode::SourceOver,
@@ -205,7 +232,8 @@ impl Plotter for TinySkiaPlotter {
             }
         }
 
-        dt.save_png(path).unwrap();
+        let res = dt.encode_png()?;
+        writer.write_all(res.as_slice())?;
         Ok(())
     }
 
@@ -237,8 +265,8 @@ impl Plotter for TinySkiaPlotter {
         self.cache.rect(rect, stroke);
     }
 
-    fn arc(&mut self, center: Pt, radius: f32, stroke: Paint) {
-        self.cache.arc(center, radius, stroke);
+    fn arc(&mut self, start: Pt, mid: Pt, end: Pt, stroke: Paint) {
+        self.cache.arc(start, mid, end, stroke);
     }
 
     fn circle(&mut self, center: Pt, radius: f32, stroke: Paint) {
@@ -249,7 +277,13 @@ impl Plotter for TinySkiaPlotter {
         self.cache.polyline(pts, stroke);
     }
 
-    fn text(&mut self, text: &str, pt: Pt, effects: FontEffects) {
-        self.cache.text(text, pt, effects);
+    fn text(&mut self, text: &str, pos: Pos, effects: Effects) {
+        self.cache.text(text, pos, effects);
     }
+}
+
+fn calculate_control_point(start: Pt, end: Pt, mid: Pt) -> Pt {
+    let start_to_mid = mid - start;
+    let end_to_mid = mid - end;
+    end + start_to_mid * 2.0 - end_to_mid
 }

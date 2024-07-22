@@ -2,9 +2,6 @@ use fontdue::{Font, FontResult};
 
 use crate::math::fonts::OSIFONT;
 
-
-
-
 pub fn load_font() -> FontResult<Font> {
     let settings = fontdue::FontSettings::default();
     fontdue::Font::from_bytes(OSIFONT.to_vec(), settings)

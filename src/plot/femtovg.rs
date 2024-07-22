@@ -11,7 +11,6 @@ use glutin::{
 };
 #[cfg(not(target_arch = "wasm32"))]
 use glutin_winit::DisplayBuilder;
-use ndarray::arr2;
 #[cfg(not(target_arch = "wasm32"))]
 use raw_window_handle::HasRawWindowHandle;
 use std::num::NonZeroU32;
@@ -21,7 +20,7 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
-use crate::gr::{self, Pt, Rect};
+use crate::gr::{self, Pos, Pt, Rect};
 
 use super::Plotter;
 
@@ -145,14 +144,14 @@ impl Plotter for FemtoVgPlotter {
         self.path = Path::new();
     }
 
-    fn arc(&mut self, center: crate::gr::Pt, radius: f32, stroke: super::Paint) {}
+    fn arc(&mut self, start: Pt, mid: Pt, end: Pt, stroke: super::Paint) {}
 
     fn circle(&mut self, center: crate::gr::Pt, radius: f32, stroke: super::Paint) {}
 
-    fn text(&mut self, text: &str, pt: crate::gr::Pt, effects: super::FontEffects) {
+    fn text(&mut self, text: &str, pos: Pos, effects: super::Effects) {
         //let paint = effects.color.map(|c| {
-        let mut paint = Paint::color(effects.color.femto());
-        paint.set_font_size(effects.size * SCALE);
+        let mut paint = Paint::color(effects.font.color.unwrap().femto());
+        paint.set_font_size(effects.font.size.0 * SCALE);
         paint.set_anti_alias(true);
         paint.set_text_align(Align::Center);
         paint.set_text_baseline(Baseline::Top);
@@ -160,7 +159,7 @@ impl Plotter for FemtoVgPlotter {
         //});
 
         self.textlist
-            .push((pt.x * SCALE, pt.y * SCALE, text.to_string(), Some(paint)));
+            .push((pos.x * SCALE, pos.y * SCALE, text.to_string(), Some(paint)));
     }
 
     fn polyline(&mut self, pts: crate::gr::Pts, stroke: super::Paint) {
@@ -177,6 +176,10 @@ impl Plotter for FemtoVgPlotter {
     }
 
     fn save(self, _path: &std::path::Path) -> std::io::Result<()> {
+        todo!()
+    }
+
+    fn write<W: std::io::Write>(self, writer: &mut W) -> std::io::Result<()> {
         todo!()
     }
 }

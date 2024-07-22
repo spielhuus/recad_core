@@ -1,8 +1,8 @@
 //!Plot the recad drawings.
-use std::{fmt, path::Path};
+use std::{fmt, io::Write, path::Path};
 
 use crate::{
-    gr::{Color, Pt, Pts, Rect},
+    gr::{Color, Effects, Pos, Pt, Pts, Rect},
     math::{ToNdarray, Transform},
 };
 
@@ -21,6 +21,7 @@ pub use svg::SvgPlotter;
 use theme::Themes;
 
 ///The paint for the plotter.
+///TODO use gr::Stroke
 #[derive(Clone)]
 pub struct Paint {
     pub(crate) color: Color,
@@ -90,17 +91,33 @@ impl fmt::Display for FontAnchor {
     }
 }
 
-
-///The font effects for the drawings.
-#[derive(Clone)]
-pub struct FontEffects {
-    pub angle: f32,
-    pub anchor: FontAnchor,
-    pub baseline: String,
-    pub face: String,
-    pub size: f32,
-    pub color: Color,
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum FontBaseline {
+    Auto,
+    Hanging,
+    Middle,
 }
+
+impl fmt::Display for FontBaseline {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            FontBaseline::Auto => write!(f, "auto"),
+            FontBaseline::Hanging => write!(f, "hanging"),
+            FontBaseline::Middle => write!(f, "middle"),
+        }
+    }
+}
+
+/////The font effects for the drawings.
+//#[derive(Clone)]
+//pub struct FontEffects {
+//    pub angle: f32,
+//    pub anchor: FontAnchor,
+//    pub baseline: FontBaseline,
+//    pub face: String,
+//    pub size: f32,
+//    pub color: Color,
+//}
 
 #[derive(Debug)]
 //Line CAP, endings.
@@ -215,15 +232,25 @@ pub trait Plotter {
 
     ///Draw a rectancle with stroke.
     fn rect(&mut self, r: Rect, stroke: Paint);
-    fn arc(&mut self, center: Pt, radius: f32, stroke: Paint);
+    ///Draw an arc with stroke.
+    fn arc(&mut self, start: Pt, mid: Pt, end: Pt, stroke: Paint);
     fn circle(&mut self, center: Pt, radius: f32, stroke: Paint);
-    fn text(&mut self, text: &str, pt: Pt, effects: FontEffects);
+    fn text(&mut self, text: &str, pos: Pos, effects: Effects);
 
     ///Draw a polyline with the given Pts.
     fn polyline(&mut self, pts: Pts, stroke: Paint);
 
+
+    /// Write the image to a buffer.
+    fn write<W: Write>(self, writer: &mut W) -> std::io::Result<()>;
+
     /// Save the image to a path.
-    fn save(self, path: &Path) -> std::io::Result<()>;
+    fn save(self, path: &std::path::Path) -> std::io::Result<()>; //{
+    //    let mut buffer: Vec<u8> = Vec::new();
+    //    self.write(&mut buffer)?;
+    //    let mut file = File::create(path)?;
+    //    file.write_all(buffer.as_slice())
+    //}
 }
 
 pub enum PlotterNodes {
@@ -236,8 +263,9 @@ pub enum PlotterNodes {
         stroke: Paint,
     },
     Arc {
-        center: Pt,
-        radius: f32,
+        start: Pt,
+        mid: Pt,
+        end: Pt,
         stroke: Paint,
     },
     Circle {
@@ -247,8 +275,8 @@ pub enum PlotterNodes {
     },
     Text {
         text: String,
-        pt: Pt,
-        effects: FontEffects,
+        pos: Pos,
+        effects: Effects,
     },
 }
 
@@ -294,12 +322,14 @@ impl PlotterImpl {
                 stroke: stroke.clone(),
             },
             PlotterNodes::Arc {
-                center,
-                radius,
+                start,
+                mid,
+                end,
                 stroke,
             } => PlotterNodes::Arc {
-                center: transform.transform(&center.ndarray()).ndarray(),
-                radius: radius * scale,
+                start: transform.transform(&start.ndarray()).ndarray(),
+                mid: transform.transform(&mid.ndarray()).ndarray(),
+                end: transform.transform(&end.ndarray()).ndarray(),
                 stroke: stroke.clone(),
             },
             PlotterNodes::Circle {
@@ -311,10 +341,13 @@ impl PlotterImpl {
                 radius: radius * scale,
                 stroke: stroke.clone(),
             },
-            PlotterNodes::Text { text, pt, effects } => PlotterNodes::Text {
-                text: text.clone(), 
-                pt: transform.transform(&pt.ndarray()).ndarray(),
-                effects: effects.clone(),
+            PlotterNodes::Text { text, pos, effects } => {
+                let position: Pt = transform.transform(&pos.ndarray()).ndarray();
+                PlotterNodes::Text {
+                    text: text.clone(), 
+                    pos: Pos { x: position.x, y: position.y, angle: pos.angle },
+                    effects: effects.clone(),
+                }
             },
         }).collect::<Vec<PlotterNodes>>();
     }
@@ -325,6 +358,7 @@ impl Plotter for PlotterImpl {
     fn set_view_box(&mut self, _: Rect) {}
     fn scale(&mut self, _: f32) {}
     fn save(self, _: &Path) -> std::io::Result<()> { Ok(()) }
+    fn write<W: Write>(self, _: &mut W) -> std::io::Result<()> { Ok(()) }
 
     fn move_to(&mut self, pt: Pt) {
         self.items.push(PlotterNodes::MoveTo(pt));
@@ -346,10 +380,11 @@ impl Plotter for PlotterImpl {
         self.items.push(PlotterNodes::Rect { rect, stroke });
     }
 
-    fn arc(&mut self, center: Pt, radius: f32, stroke: Paint) {
+    fn arc(&mut self, start: Pt, mid: Pt, end: Pt, stroke: Paint) {
         self.items.push(PlotterNodes::Arc {
-            center,
-            radius,
+            start,
+            mid,
+            end,
             stroke,
         });
     }
@@ -362,10 +397,10 @@ impl Plotter for PlotterImpl {
         });
     }
 
-    fn text(&mut self, text: &str, pt: Pt, effects: FontEffects) {
+    fn text(&mut self, text: &str, pos: Pos, effects: Effects) {
         self.items.push(PlotterNodes::Text {
             text: text.to_string(),
-            pt,
+            pos,
             effects,
         });
     }
@@ -382,4 +417,5 @@ impl Plotter for PlotterImpl {
         }
         self.stroke(stroke);
     }
+
 }

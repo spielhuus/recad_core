@@ -1,9 +1,9 @@
 
 use raqote::{DrawOptions, DrawTarget, LineCap, LineJoin, PathBuilder, SolidSource, Source, StrokeStyle};
 
-use crate::{gr::{Color, Pt, Pts, Rect}, math::fonts::OSIFONT};
+use crate::{gr::{Color, Effects, Pos, Pt, Pts, Rect}, math::fonts::OSIFONT};
 
-use super::{FontEffects, Paint, Plotter, PlotterImpl};
+use super::{Paint, Plotter, PlotterImpl};
 
 const SCALE: f32 = 25.4;
 
@@ -85,11 +85,12 @@ impl Plotter for RaqotePlotter {
                     do_stroke!(dt, &path, stroke);
                     pb = PathBuilder::new();
                 },
-                super::PlotterNodes::Arc { center, radius, stroke } => {
-                    pb.arc(center.x, center.y, *radius, 0.0, std::f32::consts::PI);
-                    let path = pb.finish(); 
-                    do_stroke!(dt, &path, stroke);
-                    pb = PathBuilder::new();
+                super::PlotterNodes::Arc { start, mid, end, stroke } => {
+                    //TODO
+                    //pb.arc(center.x, center.y, *radius, 0.0, std::f32::consts::PI);
+                    //let path = pb.finish(); 
+                    //do_stroke!(dt, &path, stroke);
+                    //pb = PathBuilder::new();
                 },
                 super::PlotterNodes::Circle { center, radius, stroke } => {
                     pb.arc(center.x, center.y, *radius, 0.0, std::f32::consts::PI);
@@ -97,13 +98,13 @@ impl Plotter for RaqotePlotter {
                     do_stroke!(dt, &path, stroke);
                     pb = PathBuilder::new();
                 },
-                super::PlotterNodes::Text { text, pt, effects } => {
+                super::PlotterNodes::Text { text, pos, effects } => {
                     let font = font_kit::loader::Loader::from_bytes(std::sync::Arc::new(OSIFONT.to_vec()), 0).unwrap();
                     dt.draw_text(
                         &font,
-                        effects.size * SCALE,
+                        effects.font.size.0 * SCALE,
                         text,
-                        raqote::Point::new(pt.x, pt.y),
+                        raqote::Point::new(pos.x, pos.y),
                         &Source::Solid(SolidSource::from_unpremultiplied_argb(255, 0, 180, 0)),
                         &DrawOptions::new(),
                     );
@@ -111,7 +112,7 @@ impl Plotter for RaqotePlotter {
                 },
             }
         }
-        dt.write_png(path);
+        dt.write_png(path)?;
         Ok(())
     }
 
@@ -143,8 +144,8 @@ impl Plotter for RaqotePlotter {
         self.cache.rect(rect, stroke);
     }
 
-    fn arc(&mut self, center: Pt, radius: f32, stroke: Paint) {
-        self.cache.arc(center, radius, stroke);
+    fn arc(&mut self, start: Pt, mid: Pt, end: Pt, stroke: Paint) {
+        self.cache.arc(start, mid, end, stroke);
     }
 
     fn circle(&mut self, center: Pt, radius: f32, stroke: Paint) {
@@ -155,7 +156,11 @@ impl Plotter for RaqotePlotter {
         self.cache.polyline(pts, stroke);
     }
 
-    fn text(&mut self, text: &str, pt: Pt, effects: FontEffects) {
-        self.cache.text(text, pt, effects);
+    fn text(&mut self, text: &str, pos: Pos, effects: Effects) {
+        self.cache.text(text, pos, effects);
+    }
+
+    fn write<W: std::io::Write>(self, writer: &mut W) -> std::io::Result<()> {
+        todo!()
     }
 }

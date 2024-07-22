@@ -3,10 +3,11 @@ use ndarray::{arr2, Array2, Axis};
 
 use crate::{
     draw::At,
-    gr::{Arc, Circle, Color, GraphicItem, Polyline, Pt, Pts, Rect, Rectangle},
+    gr::{Arc, Circle, Color, Effects, Font, GraphicItem, Polyline, Pos, Pt, Pts, Rect, Rectangle},
     math::{bbox::Bbox, pin_position, ToNdarray, Transform},
     plot::{
-        theme::{Style, Theme}, FontAnchor, FontEffects, Paint, PlotCommand, Plotter
+        theme::{Style, Theme},
+        FontAnchor, FontBaseline, Paint, PlotCommand, Plotter,
     },
     schema::SchemaItem,
     sexp::constants::el,
@@ -30,9 +31,15 @@ macro_rules! outline {
         if cfg!(debug_assertions) {
             let outline = $item.outline(&$self)?;
             $plotter.move_to(outline.start);
-            $plotter.line_to(Pt { x: outline.end.x, y: outline.start.y });
+            $plotter.line_to(Pt {
+                x: outline.end.x,
+                y: outline.start.y,
+            });
             $plotter.line_to(outline.end);
-            $plotter.line_to(Pt { x: outline.start.x, y: outline.end.y });
+            $plotter.line_to(Pt {
+                x: outline.start.x,
+                y: outline.end.y,
+            });
             $plotter.line_to(outline.start);
             $plotter.close();
             $plotter.stroke(Paint::outline());
@@ -52,22 +59,34 @@ impl Plot for Schema {
         match at {
             At::Pt(pt) => *pt,
             At::Pin(reference, pin) => {
-                let unit = self.pin_unit(reference, pin).ok_or(Error(
-                    "builder".to_string(),
-                    format!("pin unit not found ({}, {})", reference, pin),
-                )).unwrap();
-                let symbol = self.symbol(reference, unit).ok_or(Error(
-                    "builder".to_string(),
-                    format!("symbol unit not found ({}, {})", reference, unit),
-                )).unwrap();
-                let lib = self.library_symbol(&symbol.lib_id).ok_or(Error(
-                    "builder".to_string(),
-                    format!("symbol unit not found ({}, {})", reference, unit),
-                )).unwrap();
-                let pin = lib.pin(pin).ok_or(Error(
-                    "builder".to_string(),
-                    format!("pin not found ({})", pin),
-                )).unwrap();
+                let unit = self
+                    .pin_unit(reference, pin)
+                    .ok_or(Error(
+                        "builder".to_string(),
+                        format!("pin unit not found ({}, {})", reference, pin),
+                    ))
+                    .unwrap();
+                let symbol = self
+                    .symbol(reference, unit)
+                    .ok_or(Error(
+                        "builder".to_string(),
+                        format!("symbol unit not found ({}, {})", reference, unit),
+                    ))
+                    .unwrap();
+                let lib = self
+                    .library_symbol(&symbol.lib_id)
+                    .ok_or(Error(
+                        "builder".to_string(),
+                        format!("symbol unit not found ({}, {})", reference, unit),
+                    ))
+                    .unwrap();
+                let pin = lib
+                    .pin(pin)
+                    .ok_or(Error(
+                        "builder".to_string(),
+                        format!("pin not found ({})", pin),
+                    ))
+                    .unwrap();
                 pin_position(symbol, pin)
             }
             At::Dot(_) => todo!(),
@@ -75,7 +94,6 @@ impl Plot for Schema {
     }
 
     fn plot(&self, plotter: &mut impl Plotter, command: PlotCommand) -> Result<(), Error> {
- 
         let theme = Theme::from(command.theme);
         let paper_size: (f32, f32) = self.paper.clone().into();
 
@@ -89,28 +107,44 @@ impl Plot for Schema {
                             let mut anchor = prop.effects.anchor();
                             plotter.text(
                                 &prop.value,
-                                prop.pos.into(),
-                                FontEffects {
-                                    angle: if symbol.pos.angle + prop.pos.angle >= 360.0 {
-                                        symbol.pos.angle + prop.pos.angle - 360.0
-                                    } else if symbol.pos.angle + prop.pos.angle == 180.0 {
-                                        if anchor == FontAnchor::End {
-                                            anchor = FontAnchor::Start;
-                                        }
-                                        0.0
-                                    } else if symbol.pos.angle + prop.pos.angle == 90.0 {
-                                        270.0
-                                    } else {
-                                        symbol.pos.angle + prop.pos.angle
+                                prop.pos.into(), //TODO
+                                Effects {
+                                    font: Font {
+                                        face: Some(theme.face()), //TODO
+                                        size: theme
+                                            .font_size(prop.effects.font.size, Style::Property),
+                                        thickness: prop.effects.font.thickness,
+                                        bold: prop.effects.font.bold,
+                                        italic: prop.effects.font.italic,
+                                        line_spacing: prop.effects.font.line_spacing,
+                                        color: Some(
+                                            theme.color(prop.effects.font.color, Style::Property),
+                                        ),
                                     },
-                                    anchor,
-                                    baseline: prop.effects.baseline(),
-                                    face: theme.face(), //TODO prop.effects.font.face.clone().unwrap(),
-                                    size: theme
-                                        .font_size(prop.effects.font.size, Style::Property)
-                                        .0,
-                                    color: theme.color(prop.effects.font.color, Style::Property),
+                                    justify: prop.effects.justify.clone(),
+                                    hide: prop.visible(),
                                 },
+                                //FontEffects {
+                                //    angle: if symbol.pos.angle + prop.pos.angle >= 360.0 {
+                                //        symbol.pos.angle + prop.pos.angle - 360.0
+                                //    } else if symbol.pos.angle + prop.pos.angle == 180.0 {
+                                //        if anchor == FontAnchor::End {
+                                //            anchor = FontAnchor::Start;
+                                //        }
+                                //        0.0
+                                //    } else if symbol.pos.angle + prop.pos.angle == 90.0 {
+                                //        270.0
+                                //    } else {
+                                //        symbol.pos.angle + prop.pos.angle
+                                //    },
+                                //    anchor,
+                                //    baseline: prop.effects.baseline(),
+                                //    face: theme.face(), //TODO prop.effects.font.face.clone().unwrap(),
+                                //    size: theme
+                                //        .font_size(prop.effects.font.size, Style::Property)
+                                //        .0,
+                                //    color: theme.color(prop.effects.font.color, Style::Property),
+                                //},
                             );
                         }
                     }
@@ -238,15 +272,32 @@ impl Plot for Schema {
                     };
                     plotter.text(
                         &label.text,
-                        text_pos.ndarray(),
-                        FontEffects {
-                            angle: text_angle,
-                            anchor: label.effects.anchor(),
-                            baseline: label.effects.baseline(),
-                            face: theme.face(), //TODO label.effects.font.face.clone().unwrap(),
-                            size: theme.font_size(label.effects.font.size, Style::Label).0,
-                            color: theme.color(label.effects.font.color, Style::Property),
+                        Pos {
+                            x: text_pos[[0, 0]],
+                            y: text_pos[[0, 1]],
+                            angle: label.pos.angle,
                         },
+                        Effects {
+                            font: Font {
+                                face: Some(theme.face()), //TODO
+                                size: theme.font_size(label.effects.font.size, Style::Property),
+                                thickness: label.effects.font.thickness,
+                                bold: label.effects.font.bold,
+                                italic: label.effects.font.italic,
+                                line_spacing: label.effects.font.line_spacing,
+                                color: Some(theme.color(label.effects.font.color, Style::Property)),
+                            },
+                            justify: label.effects.justify.clone(),
+                            hide: label.effects.hide,
+                        },
+                        //FontEffects {
+                        //    angle: text_angle,
+                        //    anchor: label.effects.anchor(),
+                        //    baseline: label.effects.baseline(),
+                        //    face: theme.face(), //TODO label.effects.font.face.clone().unwrap(),
+                        //    size: theme.font_size(label.effects.font.size, Style::Label).0,
+                        //    color: theme.color(label.effects.font.color, Style::Property),
+                        //},
                     );
                 }
                 SchemaItem::GlobalLabel(label) => {
@@ -269,15 +320,32 @@ impl Plot for Schema {
                     };
                     plotter.text(
                         &label.text,
-                        text_pos.ndarray(),
-                        FontEffects {
-                            angle: text_angle,
-                            anchor: label.effects.anchor(),
-                            baseline: label.effects.baseline(),
-                            face: theme.face(), //TODO label.effects.font.face.clone().unwrap(),
-                            size: theme.font_size(label.effects.font.size, Style::Label).0,
-                            color: theme.color(label.effects.font.color, Style::Property),
+                        Pos {
+                            x: text_pos[[0, 0]],
+                            y: text_pos[[0, 1]],
+                            angle: label.pos.angle,
                         },
+                        Effects {
+                            font: Font {
+                                face: Some(theme.face()), //TODO
+                                size: theme.font_size(label.effects.font.size, Style::Property),
+                                thickness: label.effects.font.thickness,
+                                bold: label.effects.font.bold,
+                                italic: label.effects.font.italic,
+                                line_spacing: label.effects.font.line_spacing,
+                                color: Some(theme.color(label.effects.font.color, Style::Property)),
+                            },
+                            justify: label.effects.justify.clone(),
+                            hide: label.effects.hide,
+                        },
+                        //FontEffects {
+                        //    angle: text_angle,
+                        //    anchor: label.effects.anchor(),
+                        //    baseline: label.effects.baseline(),
+                        //    face: theme.face(), //TODO label.effects.font.face.clone().unwrap(),
+                        //    size: theme.font_size(label.effects.font.size, Style::Label).0,
+                        //    color: theme.color(label.effects.font.color, Style::Property),
+                        //},
                     );
 
                     //if item.global {
@@ -301,22 +369,35 @@ impl Plot for Schema {
                     //        ),
                     //    ));
                     //}
-                },
+                }
                 SchemaItem::Text(text) => {
                     outline!(self, text, plotter);
                     plotter.text(
                         &text.text,
-                        text.pos.into(),
-                        FontEffects {
-                            angle: text.pos.angle,
-                            anchor: text.effects.anchor(),
-                            baseline: text.effects.baseline(),
-                            face: theme.face(), //TODO label.effects.font.face.clone().unwrap(),
-                            size: theme.font_size(text.effects.font.size, Style::Label).0,
-                            color: theme.color(text.effects.font.color, Style::Property),
+                        text.pos,
+                        Effects {
+                            font: Font {
+                                face: Some(theme.face()), //TODO
+                                size: theme.font_size(text.effects.font.size, Style::Property),
+                                thickness: text.effects.font.thickness,
+                                bold: text.effects.font.bold,
+                                italic: text.effects.font.italic,
+                                line_spacing: text.effects.font.line_spacing,
+                                color: Some(theme.color(text.effects.font.color, Style::Property)),
+                            },
+                            justify: text.effects.justify.clone(),
+                            hide: text.effects.hide,
                         },
+                        //FontEffects {
+                        //    angle: text.pos.angle,
+                        //    anchor: text.effects.anchor(),
+                        //    baseline: text.effects.baseline(),
+                        //    face: theme.face(), //TODO label.effects.font.face.clone().unwrap(),
+                        //    size: theme.font_size(text.effects.font.size, Style::Label).0,
+                        //    color: theme.color(text.effects.font.color, Style::Property),
+                        //},
                     );
-                },
+                }
                 _ => log::error!("plotting item not supported: {:?}", item),
             }
         }
@@ -331,13 +412,16 @@ impl Plot for Schema {
                     y: paper_size.1,
                 },
             });
-        }  else {
+        } else {
             let outline = self.outline()?;
             plotter.set_view_box(Rect {
-                start: Pt { x: outline.start.x, y: outline.start.y },
+                start: Pt {
+                    x: outline.start.x,
+                    y: outline.start.y,
+                },
                 end: Pt {
                     x: outline.end.x,
-                    y: outline.end.y
+                    y: outline.end.y,
                 },
             });
         }
@@ -392,42 +476,19 @@ fn arc(
     //<P: Plotter>(
     plotter: &mut impl Plotter,
     transform: &Transform,
-    poly: &Arc,
+    arc: &Arc,
     style: &Style,
     theme: &Theme,
 ) {
-
-    //let center = arr2(&[[circle.center.x, circle.center.y]]);
-    //let t = transform.transform(&center);
-    //plotter.arc(
-    //    Pt {
-    //        x: t[[0, 0]],
-    //        y: t[[0, 1]],
-    //    },
-    //    circle.radius,
-    //    Paint {
-    //        color: theme.color(None, style.clone()),
-    //        fill: None,
-    //        width: theme.width(0.0, style.clone()),
-    //    },
-    //);
-    //
-    //let arc_start: Array1<f64> = item.item.value(el::GRAPH_START).unwrap();
-    //let arc_mid: Array1<f64> = item.item.value("mid").unwrap();
-    //let arc_end: Array1<f64> = item.item.value(el::GRAPH_END).unwrap();
-    //let classes = vec![Style::Outline, Style::Fill(item.item.into())];
-    //plot_items.push(PlotItem::Arc(
-    //    100,
-    //    Arc::new(
-    //        arc_start,
-    //        arc_mid,
-    //        arc_end,
-    //        0.0,
-    //        None,
-    //        self.theme.get_stroke(item.item.into(), classes.as_slice()),
-    //        None,
-    //    ),
-    //));
+    plotter.arc(
+       transform.transform(&arc.start.ndarray()).ndarray(), 
+       transform.transform(&arc.mid.ndarray()).ndarray(), 
+       transform.transform(&arc.end.ndarray()).ndarray(),
+        Paint {
+            color: theme.color(None, style.clone()),
+            fill: None,
+            width: theme.width(0.0, style.clone()),
+        });
 }
 
 fn rectangle<P: Plotter>(
@@ -563,15 +624,29 @@ fn pin<P: Plotter>(
         let pos = line.0[0];
         plotter.text(
             &pin.number.name,
-            pos,
-            FontEffects {
+            Pos {
+                x: pos.x,
+                y: pos.y,
                 angle: 0.0,
-                anchor: FontAnchor::Middle,
-                baseline: String::from("middle"),
-                face: String::from("osifont"),
-                size: 1.25,
-                color: Color::black(),
             },
+            Effects {
+                font: Font {
+                    face: Some(theme.face()), //TODO
+                    size: theme.font_size((0.0, 0.0), Style::PinNumber),
+                    color: Some(theme.color(None, Style::PinNumber)),
+                    ..Default::default()
+                },
+                justify: vec![],
+                hide: false,
+            },
+            //FontEffects {
+            //    angle: 0.0,
+            //    anchor: FontAnchor::Middle,
+            //    baseline: FontBaseline::Middle,
+            //    face: String::from("osifont"),
+            //    size: 1.25,
+            //    color: Color::black(),
+            //},
         );
     }
 
@@ -592,17 +667,32 @@ fn pin<P: Plotter>(
             .translation(Pt { x: to.x, y: to.y })
             .mirror(&Some(String::from("x")));
         let line: Pts = translate.transform(&pts.ndarray()).ndarray();
+        let pos = line.0[0];
         plotter.text(
             &pin.name.name,
-            line.0[1],
-            FontEffects {
+            Pos {
+                x: pos.x,
+                y: pos.y,
                 angle: 0.0,
-                anchor: align,
-                baseline: String::from("middle"),
-                face: String::from("osifont"),
-                size: 1.75,
-                color: Color::red(),
             },
+            Effects {
+                font: Font {
+                    face: Some(theme.face()), //TODO
+                    size: theme.font_size((0.0, 0.0), Style::PinName),
+                    color: Some(theme.color(None, Style::PinName)),
+                    ..Default::default()
+                },
+                justify: vec![],
+                hide: false,
+            },
+            //FontEffects {
+            //    angle: 0.0,
+            //    anchor: align,
+            //    baseline: FontBaseline::Middle,
+            //    face: String::from("osifont"),
+            //    size: 1.75,
+            //    color: Color::red(),
+            //},
         );
     }
 }

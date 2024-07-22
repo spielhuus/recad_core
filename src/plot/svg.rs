@@ -1,13 +1,13 @@
-use std::io::Write;
+use std::{fs::File, io::Write};
 
 use svg::{
     node::element::{path::Data, Circle, Path, Rectangle, Text},
-    save as svgsave, Document, Node,
+    write as svgwrite, Document, Node,
 };
 
-use crate::gr::{Color, Pt, Pts, Rect};
+use crate::gr::{Color, Effects, Justify, Pos, Pt, Pts, Rect};
 
-use super::{FontEffects, Paint, Plotter};
+use super::{Paint, Plotter};
 
 ///Plot a schema/pcb to a svg file.
 pub struct SvgPlotter {
@@ -15,6 +15,25 @@ pub struct SvgPlotter {
     scale: f32,
     paths: Document,
     data: Data,
+}
+
+pub fn anchor(effects: &Effects) -> String {
+    if effects.justify.contains(&Justify::Right) {
+        String::from("end")
+    } else if effects.justify.contains(&Justify::Left) {
+        String::from("start")
+    } else {
+        String::from("middle")
+    }
+}
+pub fn baseline(effects: &Effects) -> String {
+    if effects.justify.contains(&Justify::Bottom) {
+        String::from("auto")
+    } else if effects.justify.contains(&Justify::Top) {
+        String::from("hanging")
+    } else {
+        String::from("middle")
+    }
 }
 
 #[allow(clippy::new_without_default)]
@@ -35,15 +54,28 @@ impl Plotter for SvgPlotter {
     }
 
     fn save(self, path: &std::path::Path) -> std::io::Result<()> {
+        let mut buffer: Vec<u8> = Vec::new();
+        self.write(&mut buffer)?;
+        let mut file = File::create(path)?;
+        file.write_all(buffer.as_slice())
+    }
+
+    fn write<W: Write>(self, writer: &mut W) -> std::io::Result<()> {
         let mut document: Document = Document::new();
-        if let Some(viewbox) = self.viewbox {
+        if let Some(viewbox) = &self.viewbox {
             document = document.set(
                 "width",
-                format!("{}mm", crate::round((viewbox.end.x - viewbox.start.x) * self.scale)),
+                format!(
+                    "{}mm",
+                    crate::round((viewbox.end.x - viewbox.start.x) * self.scale)
+                ),
             );
             document = document.set(
                 "height",
-                format!("{}mm", crate::round((viewbox.end.y - viewbox.start.y) * self.scale)),
+                format!(
+                    "{}mm",
+                    crate::round((viewbox.end.y - viewbox.start.y) * self.scale)
+                ),
             );
             document = document.set(
                 "viewBox",
@@ -56,12 +88,8 @@ impl Plotter for SvgPlotter {
             );
         }
 
-        //for path in self.paths {
-        //    document = document.add(path);
-        //}
-
         document.append(self.paths);
-        svgsave(path, &document).unwrap();
+        svgwrite(writer, &document).unwrap();
         Ok(())
     }
 
@@ -126,16 +154,38 @@ impl Plotter for SvgPlotter {
         );
     }
 
-    fn arc(&mut self, center: Pt, radius: f32, stroke: Paint) {
-        //TODO self.paths.append(
-        //    Arc::new()
-        //        .set("cx", center.x)
-        //        .set("cy", center.y)
-        //        .set("r", radius)
-        //        .set("fill", stroke.fill.unwrap_or(Color::None).to_string())
-        //        .set("stroke", stroke.color.to_string())
-        //        .set("stroke-width", stroke.width),
-        //);
+    fn arc(&mut self, start: Pt, mid: Pt, end: Pt, stroke: Paint) {
+        let (center, radius) = calculate_circle(start, mid, end).unwrap();  
+        let start_angle = angle(&center, &start);
+        let end_angle = angle(&center, &end);
+        let sweep_flag = sweep_flag(&start, &mid, &end);
+
+        let large_arc_flag = if end_angle - start_angle > 180.0 {
+            "1"
+        } else {
+            "0"
+        };
+
+        let c = Path::new()
+            .set(
+                "d",
+                format!(
+                    "M{:.2} {:.2} A{:.2} {:.2} 0.0 {} {} {:.2} {:.2}",
+                    start.x,
+                    start.y,
+                    radius,
+                    radius,
+                    large_arc_flag,
+                    sweep_flag,
+                    end.x,
+                    end.y
+                ),
+            )
+            .set("fill", "none")
+            .set("stroke", stroke.color.to_string())
+            .set("stroke-width", stroke.width);
+
+        self.paths.append(c);
     }
 
     fn circle(&mut self, center: Pt, radius: f32, stroke: Paint) {
@@ -163,32 +213,68 @@ impl Plotter for SvgPlotter {
             }
         }
 
-        //for (i, p) in pts.0.iter().enumerate() {
-        //    if i == 0 {
-        //        self.move_to(*p);
-        //    } else {
-        //        self.line_to(*p);
-        //    }
-        //}
         self.stroke(stroke);
     }
 
-    fn text(&mut self, text: &str, pt: Pt, effects: FontEffects) {
+    fn text(&mut self, text: &str, pos: Pos, effects: Effects) {
         let mut t = Text::new(text)
-            .set("text-anchor", effects.anchor.to_string())
-            .set("dominant-baseline", effects.baseline)
-            .set("font-family", effects.face)
-            .set("font-size", format!("{}pt", effects.size))
-            .set("fill", effects.color.to_string());
+            .set("text-anchor", anchor(&effects))
+            .set("dominant-baseline", baseline(&effects))
+            .set("font-family", effects.font.face.unwrap())
+            .set("font-size", format!("{}pt", effects.font.size.0))
+            .set("fill", effects.font.color.unwrap().to_string());
 
-        if effects.angle != 0.0 {
+        if pos.angle != 0.0 {
             t = t.set(
                 "transform",
-                format!("translate({},{}) rotate({})", pt.x, pt.y, effects.angle),
+                format!("translate({},{}) rotate({})", pos.x, pos.y, pos.angle),
             );
         } else {
-            t = t.set("transform", format!("translate({},{})", pt.x, pt.y));
+            t = t.set("transform", format!("translate({},{})", pos.x, pos.y));
         }
         self.paths.append(t);
     }
+}
+
+// Function to calculate angle between center and point
+fn angle(center: &Pt, point: &Pt) -> f32 {
+    (point.y - center.y).atan2(point.x - center.x)
+}
+
+// calculate the svg sweep flac from star, middle and end points.
+pub fn sweep_flag(start: &Pt, mid: &Pt, end: &Pt) -> String {
+    if (start.x - mid.x) * (end.y - mid.y)
+        > (start.y - mid.y) * (end.x - mid.x) {
+        0
+    } else {
+        1
+    }.to_string()
+}
+
+fn calculate_circle(p1: Pt, p2: Pt, p3: Pt) -> Option<(Pt, f32)> {
+    // Calculate the midpoints of p1-p2 and p2-p3
+    let mid1 = Pt { x: (p1.x + p2.x) / 2.0, y: (p1.y + p2.y) / 2.0 };
+    let mid2 = Pt { x: (p2.x + p3.x) / 2.0, y: (p2.y + p3.y) / 2.0 };
+
+    // Slopes of the perpendicular bisectors
+    let slope1 = -(p2.x - p1.x) / (p2.y - p1.y);
+    let slope2 = -(p3.x - p2.x) / (p3.y - p2.y);
+
+    // Check if the points are collinear
+    if (p2.y - p1.y) * (p3.x - p2.x) == (p3.y - p2.y) * (p2.x - p1.x) {
+        return None;
+    }
+
+    // Line equations in the form of y = mx + b
+    let b1 = mid1.y - slope1 * mid1.x;
+    let b2 = mid2.y - slope2 * mid2.x;
+
+    // Solving for the intersection of the two lines
+    let h = (b2 - b1) / (slope1 - slope2);
+    let k = slope1 * h + b1;
+
+    // Calculate the radius
+    let radius = ((h - p1.x).powi(2) + (k - p1.y).powi(2)).sqrt();
+
+    Some((Pt { x: h, y: k }, radius ))
 }

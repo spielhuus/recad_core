@@ -49,7 +49,7 @@ impl std::convert::From<SexpTree> for Result<Schema, Error> {
                         .map(|s| Into::<Result<LibrarySymbol, Error>>::into(s).unwrap())
                         .collect()
                 }
-                el::SYMBOL => schema.items.push(SchemaItem::Symbol(node.into())),
+                el::SYMBOL => schema.items.push(SchemaItem::Symbol(Into::<Result<Symbol, Error>>::into(node)?)),
                 el::CIRCLE => schema.items.push(SchemaItem::Circle(Into::<
                     Result<Circle, Error>,
                 >::into(
@@ -380,11 +380,11 @@ impl std::convert::From<&Sexp> for Result<Rectangle, Error> {
 impl std::convert::From<&Sexp> for Result<Arc, Error> {
     fn from(sexp: &Sexp) -> Self {
         Ok(Arc {
-            start: sexp.query(el::START).next().unwrap().into(),
-            mid: sexp.query(el::MID).next().unwrap().into(),
-            end: sexp.query(el::END).next().unwrap().into(),
+            start: sexp.query(el::START).next().ok_or(Error("sexp".to_string(), format!("Missing start element in {:?}", sexp)))?.into(),
+            mid: sexp.query(el::MID).next().ok_or(Error("sexp".to_string(), format!("Missing mid element in {:?}", sexp)))?.into(),
+            end: sexp.query(el::END).next().ok_or(Error("sexp".to_string(), format!("Missing end element in {:?}", sexp)))?.into(),
             stroke: sexp.into(),
-            fill: Into::<Result<gr::FillType, Error>>::into(sexp).unwrap(),
+            fill: Into::<Result<gr::FillType, Error>>::into(sexp)?,
             uuid: sexp.first(el::UUID),
         })
     }
@@ -527,9 +527,9 @@ impl std::convert::From<&Sexp> for Result<LibrarySymbol, Error> {
     }
 }
 
-impl std::convert::From<&Sexp> for Symbol {
+impl std::convert::From<&Sexp> for Result<Symbol, Error> {
     fn from(sexp: &Sexp) -> Self {
-        Symbol {
+        Ok(Symbol {
             lib_id: sexp.first(el::LIB_ID).unwrap(),
             pos: sexp.into(),
             unit: sexp.first(el::SYMBOL_UNIT).unwrap(),
@@ -546,26 +546,26 @@ impl std::convert::From<&Sexp> for Symbol {
             } else {
                 false
             },
-            uuid: sexp.first(el::UUID).unwrap(),
+            uuid: sexp.first(el::UUID).ok_or(Error("sexp".to_string(), format!("Missing uuid element in {:?}", sexp)))?,
             props: properties(sexp),
             pins: sexp
                 .query(el::PIN)
                 .map(|p| (p.get(0).unwrap(), p.first(el::UUID).unwrap()))
                 .collect(),
             instances: {
-                let instances = sexp.query(el::INSTANCES).next()
-                    .unwrap_or_else(|| panic!("mandatory field 'instnaces' but not found in {:#?}", sexp));
-                let project = instances.query(el::PROJECT).next().unwrap();
-                let path = project.query(el::PATH).next().unwrap();
-                vec![Instance {
-                    project: project.get(0).expect("mandatory field"),
-                    path: path.get(0).expect("mandatory field"),
-                    reference: path.first(el::REFERENCE).expect("mandatory field"),
-                    unit: path.first(el::SYMBOL_UNIT).expect("mandatory field"),
-                }]
+                if let Some(instances) = sexp.query(el::INSTANCES).next() {
+                    let project = instances.query(el::PROJECT).next().unwrap();
+                    let path = project.query(el::PATH).next().unwrap();
+                    vec![Instance {
+                        project: project.get(0).expect("mandatory field"),
+                        path: path.get(0).expect("mandatory field"),
+                        reference: path.first(el::REFERENCE).expect("mandatory field"),
+                        unit: path.first(el::SYMBOL_UNIT).expect("mandatory field"),
+                    }]
+                } else { vec![] }
             },
             attrs: To::new(),
-        }
+        })
     }
 }
 
