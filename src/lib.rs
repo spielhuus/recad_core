@@ -1,7 +1,3 @@
-
-
-
-
 use std::path::{Path, PathBuf};
 
 use {
@@ -180,7 +176,7 @@ impl SymbolLibrary {
                                     for p in ext_sym.props.iter_mut() {
                                         for node_prp in &node.props {
                                             if p.key == node_prp.key {
-                                                p.value = node_prp.value.clone();
+                                                p.value.clone_from(&node_prp.value);
                                             }
                                         }
                                     }
