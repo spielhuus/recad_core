@@ -8,17 +8,16 @@ use crate::{
 
 mod femtovg;
 mod raqote_plotter;
-mod tiny_skia_plotter;
 mod svg;
 mod text;
 pub mod theme;
-
+mod tiny_skia_plotter;
 
 pub use femtovg::FemtoVgPlotter;
 pub use raqote_plotter::RaqotePlotter;
-pub use tiny_skia_plotter::TinySkiaPlotter;
 pub use svg::SvgPlotter;
 use theme::Themes;
+pub use tiny_skia_plotter::TinySkiaPlotter;
 
 ///The paint for the plotter.
 ///TODO use gr::Stroke
@@ -240,17 +239,16 @@ pub trait Plotter {
     ///Draw a polyline with the given Pts.
     fn polyline(&mut self, pts: Pts, stroke: Paint);
 
-
     /// Write the image to a buffer.
-    fn write<W: Write>(self, writer: &mut W) -> std::io::Result<()>;
+    fn write<W: Write>(self, writer: &mut W) -> std::io::Result<(u32, u32)>;
 
     /// Save the image to a path.
     fn save(self, path: &std::path::Path) -> std::io::Result<()>; //{
-    //    let mut buffer: Vec<u8> = Vec::new();
-    //    self.write(&mut buffer)?;
-    //    let mut file = File::create(path)?;
-    //    file.write_all(buffer.as_slice())
-    //}
+                                                                  //    let mut buffer: Vec<u8> = Vec::new();
+                                                                  //    self.write(&mut buffer)?;
+                                                                  //    let mut file = File::create(path)?;
+                                                                  //    file.write_all(buffer.as_slice())
+                                                                  //}
 }
 
 pub enum PlotterNodes {
@@ -305,51 +303,59 @@ impl PlotterImpl {
 
     pub fn scale(&mut self, scale: f32) {
         let transform = Transform::new().scale(scale);
-        self.items = self.items.iter().map(|item| match item {
-            PlotterNodes::MoveTo(pt) => {
-                PlotterNodes::MoveTo(transform.transform(&pt.ndarray()).ndarray())
-            }
-            PlotterNodes::LineTo(pt) => {
-                PlotterNodes::LineTo(transform.transform(&pt.ndarray()).ndarray())
-            }
-            PlotterNodes::Close => PlotterNodes::Close,
-            PlotterNodes::Stroke(stroke) => PlotterNodes::Stroke(stroke.clone()),
-            PlotterNodes::Rect { rect, stroke } => PlotterNodes::Rect {
-                rect: Rect {
-                    start: transform.transform(&rect.start.ndarray()).ndarray(),
-                    end: transform.transform(&rect.end.ndarray()).ndarray(),
-                },
-                stroke: stroke.clone(),
-            },
-            PlotterNodes::Arc {
-                start,
-                mid,
-                end,
-                stroke,
-            } => PlotterNodes::Arc {
-                start: transform.transform(&start.ndarray()).ndarray(),
-                mid: transform.transform(&mid.ndarray()).ndarray(),
-                end: transform.transform(&end.ndarray()).ndarray(),
-                stroke: stroke.clone(),
-            },
-            PlotterNodes::Circle {
-                center,
-                radius,
-                stroke,
-            } => PlotterNodes::Circle {
-                center: transform.transform(&center.ndarray()).ndarray(),
-                radius: radius * scale,
-                stroke: stroke.clone(),
-            },
-            PlotterNodes::Text { text, pos, effects } => {
-                let position: Pt = transform.transform(&pos.ndarray()).ndarray();
-                PlotterNodes::Text {
-                    text: text.clone(), 
-                    pos: Pos { x: position.x, y: position.y, angle: pos.angle },
-                    effects: effects.clone(),
+        self.items = self
+            .items
+            .iter()
+            .map(|item| match item {
+                PlotterNodes::MoveTo(pt) => {
+                    PlotterNodes::MoveTo(transform.transform(&pt.ndarray()).ndarray())
                 }
-            },
-        }).collect::<Vec<PlotterNodes>>();
+                PlotterNodes::LineTo(pt) => {
+                    PlotterNodes::LineTo(transform.transform(&pt.ndarray()).ndarray())
+                }
+                PlotterNodes::Close => PlotterNodes::Close,
+                PlotterNodes::Stroke(stroke) => PlotterNodes::Stroke(stroke.clone()),
+                PlotterNodes::Rect { rect, stroke } => PlotterNodes::Rect {
+                    rect: Rect {
+                        start: transform.transform(&rect.start.ndarray()).ndarray(),
+                        end: transform.transform(&rect.end.ndarray()).ndarray(),
+                    },
+                    stroke: stroke.clone(),
+                },
+                PlotterNodes::Arc {
+                    start,
+                    mid,
+                    end,
+                    stroke,
+                } => PlotterNodes::Arc {
+                    start: transform.transform(&start.ndarray()).ndarray(),
+                    mid: transform.transform(&mid.ndarray()).ndarray(),
+                    end: transform.transform(&end.ndarray()).ndarray(),
+                    stroke: stroke.clone(),
+                },
+                PlotterNodes::Circle {
+                    center,
+                    radius,
+                    stroke,
+                } => PlotterNodes::Circle {
+                    center: transform.transform(&center.ndarray()).ndarray(),
+                    radius: radius * scale,
+                    stroke: stroke.clone(),
+                },
+                PlotterNodes::Text { text, pos, effects } => {
+                    let position: Pt = transform.transform(&pos.ndarray()).ndarray();
+                    PlotterNodes::Text {
+                        text: text.clone(),
+                        pos: Pos {
+                            x: position.x,
+                            y: position.y,
+                            angle: pos.angle,
+                        },
+                        effects: effects.clone(),
+                    }
+                }
+            })
+            .collect::<Vec<PlotterNodes>>();
     }
 }
 
@@ -357,8 +363,12 @@ impl Plotter for PlotterImpl {
     fn open(&self) {}
     fn set_view_box(&mut self, _: Rect) {}
     fn scale(&mut self, _: f32) {}
-    fn save(self, _: &Path) -> std::io::Result<()> { Ok(()) }
-    fn write<W: Write>(self, _: &mut W) -> std::io::Result<()> { Ok(()) }
+    fn save(self, _: &Path) -> std::io::Result<()> {
+        Ok(())
+    }
+    fn write<W: Write>(self, _: &mut W) -> std::io::Result<(u32, u32)> {
+        Ok((0, 0))
+    }
 
     fn move_to(&mut self, pt: Pt) {
         self.items.push(PlotterNodes::MoveTo(pt));
@@ -417,5 +427,4 @@ impl Plotter for PlotterImpl {
         }
         self.stroke(stroke);
     }
-
 }

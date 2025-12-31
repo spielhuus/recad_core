@@ -15,8 +15,9 @@ use glutin_winit::DisplayBuilder;
 use raw_window_handle::HasRawWindowHandle;
 use std::num::NonZeroU32;
 use winit::{
-    event::{ElementState, Event, KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent},
-    event_loop::{ControlFlow, EventLoop},
+    event::{ElementState, Event, KeyEvent, MouseButton, WindowEvent},
+    event_loop::EventLoop,
+    keyboard::{KeyCode, PhysicalKey},
     window::{Window, WindowBuilder},
 };
 
@@ -32,6 +33,23 @@ pub struct FemtoVgPlotter {
     pathlist: Vec<(Path, Option<Paint>, Option<Paint>)>,
     textlist: Vec<(f32, f32, String, Option<Paint>)>,
     path: Path,
+}
+
+impl FemtoVgPlotter {
+    pub fn width(&self) -> f32 {
+        if let Some(viewbox) = &self.viewbox {
+            viewbox.end.x - viewbox.start.x
+        } else {
+            0.0
+        }
+    }
+    pub fn height(&self) -> f32 {
+        if let Some(viewbox) = &self.viewbox {
+            viewbox.end.y - viewbox.start.y
+        } else {
+            0.0
+        }
+    }
 }
 
 trait IntoFemto<T> {
@@ -123,6 +141,7 @@ impl Plotter for FemtoVgPlotter {
     }
 
     fn rect(&mut self, r: Rect, stroke: super::Paint) {
+        println!("rect: {:?}, {:?}", r, stroke.color.femto());
         //let fstroke = stroke.color.map(|c| {
         let mut fstroke = Paint::color(stroke.color.femto());
         fstroke.set_line_width(stroke.width * SCALE);
@@ -179,7 +198,7 @@ impl Plotter for FemtoVgPlotter {
         todo!()
     }
 
-    fn write<W: std::io::Write>(self, writer: &mut W) -> std::io::Result<()> {
+    fn write<W: std::io::Write>(self, writer: &mut W) -> std::io::Result<(u32, u32)> {
         todo!()
     }
 }
@@ -202,7 +221,7 @@ impl FemtoVgPlotter {
         #[cfg(not(target_arch = "wasm32"))] title: String,
         #[cfg(not(target_arch = "wasm32"))] resizeable: bool,
     ) {
-        let event_loop = EventLoop::new();
+        let event_loop = EventLoop::new().unwrap();
 
         #[cfg(not(target_arch = "wasm32"))]
         let (canvas, window, context, surface) = {
@@ -373,12 +392,12 @@ impl FemtoVgPlotter {
 
         log::info!("Path mem usage: {}kb", total_sisze_bytes / 1024);
 
-        el.run(move |event, _, control_flow| {
-            *control_flow = ControlFlow::Poll;
+        el.run(move |event, event_loop_window_target| {
+            event_loop_window_target.set_control_flow(winit::event_loop::ControlFlow::Poll);
 
             //println!("event: {:?}",event);
             match event {
-                Event::LoopDestroyed => *control_flow = ControlFlow::Exit,
+                Event::LoopExiting => event_loop_window_target.exit(),
                 Event::WindowEvent {
                     ref event,
                     window_id,
@@ -405,13 +424,10 @@ impl FemtoVgPlotter {
                         ..
                     } => {
                         if dragging {
-                            let p0 = canvas
-                                .transform()
-                                .inversed()
-                                .transform_point(mousex, mousey);
+                            let p0 = canvas.transform().inverse().transform_point(mousex, mousey);
                             let p1 = canvas
                                 .transform()
-                                .inversed()
+                                .inverse()
                                 .transform_point(position.x as f32, position.y as f32);
 
                             canvas.translate(p1.0 - p0.0, p1.1 - p0.1);
@@ -427,7 +443,7 @@ impl FemtoVgPlotter {
                     } => {
                         let pt = canvas
                             .transform()
-                            .inversed()
+                            // TODO .inversed()
                             .transform_point(mousex, mousey);
                         canvas.translate(pt.0, pt.1);
                         canvas.scale(1.0 + (pos.y / 10.0) as f32, 1.0 + (pos.y / 10.0) as f32);
@@ -459,9 +475,9 @@ impl FemtoVgPlotter {
                         println!("magnify {:?} {:?}", delta, phase);
                     }
                     WindowEvent::KeyboardInput {
-                        input:
-                            KeyboardInput {
-                                virtual_keycode: Some(VirtualKeyCode::S),
+                        event:
+                            KeyEvent {
+                                physical_key: PhysicalKey::Code(KeyCode::KeyS),
                                 state: ElementState::Pressed,
                                 ..
                             },
@@ -479,61 +495,67 @@ impl FemtoVgPlotter {
                             );
                         }
                     }
-                    WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
+                    WindowEvent::CloseRequested => event_loop_window_target.exit(),
+                    WindowEvent::RedrawRequested { .. } => {
+                        let dpi_factor = window.scale_factor();
+                        let size = window.inner_size();
+
+                        canvas.set_size(size.width, size.height, dpi_factor as f32);
+                        canvas.clear_rect(
+                            0,
+                            0,
+                            size.width,
+                            size.height,
+                            Color::rgbf(1.0, 1.0, 1.0),
+                        );
+
+                        canvas.save();
+
+                        let f = size.width as f32 / viewbox.start.x;
+                        canvas.scale(f, f);
+
+                        for (path, fill, stroke) in &paths {
+                            if let Some(fill) = fill {
+                                canvas.fill_path(path, fill);
+                            }
+
+                            if let Some(stroke) = stroke {
+                                canvas.stroke_path(path, stroke);
+                            }
+
+                            if canvas.contains_point(path, mousex, mousey, FillRule::NonZero) {
+                                let mut paint = Paint::color(Color::rgb(32, 240, 32));
+                                paint.set_line_width(1.0);
+                                canvas.stroke_path(path, &paint);
+                            }
+                        }
+
+                        for (x, y, text, paint) in &texts {
+                            if let Some(paint) = paint {
+                                canvas.fill_text(*x, *y, text, paint).unwrap();
+                            }
+
+                            //if canvas.contains_point(path, mousex, mousey, FillRule::NonZero) {
+                            //    let mut paint = Paint::color(Color::rgb(32, 240, 32));
+                            //    paint.set_line_width(1.0);
+                            //    canvas.stroke_path(path, &paint);
+                            //}
+                        }
+
+                        canvas.restore();
+
+                        canvas.save();
+                        canvas.reset();
+                        //perf.render(&mut canvas, 5.0, 5.0);
+                        canvas.restore();
+
+                        canvas.flush();
+                        #[cfg(not(target_arch = "wasm32"))]
+                        surface.swap_buffers(&context).unwrap();
+                    }
+                    // Event::MainEventsCleared => window.request_redraw(),
                     _ => (),
                 },
-                Event::RedrawRequested(_) => {
-                    let dpi_factor = window.scale_factor();
-                    let size = window.inner_size();
-
-                    canvas.set_size(size.width, size.height, dpi_factor as f32);
-                    canvas.clear_rect(0, 0, size.width, size.height, Color::rgbf(1.0, 1.0, 1.0));
-
-                    canvas.save();
-
-                    let f = size.width as f32 / viewbox.start.x;
-                    canvas.scale(f, f);
-
-                    for (path, fill, stroke) in &paths {
-                        if let Some(fill) = fill {
-                            canvas.fill_path(path, fill);
-                        }
-
-                        if let Some(stroke) = stroke {
-                            canvas.stroke_path(path, stroke);
-                        }
-
-                        if canvas.contains_point(path, mousex, mousey, FillRule::NonZero) {
-                            let mut paint = Paint::color(Color::rgb(32, 240, 32));
-                            paint.set_line_width(1.0);
-                            canvas.stroke_path(path, &paint);
-                        }
-                    }
-
-                    for (x, y, text, paint) in &texts {
-                        if let Some(paint) = paint {
-                            canvas.fill_text(*x, *y, text, paint).unwrap();
-                        }
-
-                        //if canvas.contains_point(path, mousex, mousey, FillRule::NonZero) {
-                        //    let mut paint = Paint::color(Color::rgb(32, 240, 32));
-                        //    paint.set_line_width(1.0);
-                        //    canvas.stroke_path(path, &paint);
-                        //}
-                    }
-
-                    canvas.restore();
-
-                    canvas.save();
-                    canvas.reset();
-                    //perf.render(&mut canvas, 5.0, 5.0);
-                    canvas.restore();
-
-                    canvas.flush();
-                    #[cfg(not(target_arch = "wasm32"))]
-                    surface.swap_buffers(&context).unwrap();
-                }
-                Event::MainEventsCleared => window.request_redraw(),
                 _ => (),
             }
         });

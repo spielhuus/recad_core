@@ -1,19 +1,25 @@
-use std::{
-    fs::File, path::Path
-};
+use std::{env, path::Path};
 
 use recad_core::{
-    Schema, Plot,
-    plot::{
-        Plotter,
-        PlotCommand
-    },
+    plot::{PlotCommand, Plotter},
+    Plot, Schema,
 };
 
 fn main() {
-    let path = Path::new("tests/summe/summe.kicad_sch");
-    let schema = Schema::load(path).unwrap();
-    let mut svg = recad_core::plot::RaqotePlotter::new();
-    schema.plot(&mut svg, PlotCommand::default().border(Some(true))).unwrap(); 
-    svg.save(Path::new("raqote_summe.png")).unwrap();
+    env_logger::init();
+    let args: Vec<String> = env::args().collect();
+
+    if args.len() < 3 {
+        eprintln!("Usage: {} input_file output_file", args[0]);
+        return;
+    }
+
+    let input_path = Path::new(&args[1]);
+
+    let schema = Schema::load(input_path).unwrap();
+    let mut raqote = recad_core::plot::RaqotePlotter::new();
+    schema
+        .plot(&mut raqote, PlotCommand::new().border(Some(true)))
+        .unwrap();
+    raqote.save(Path::new(&args[2])).unwrap();
 }

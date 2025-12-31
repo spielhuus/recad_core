@@ -21,14 +21,14 @@ fn to_color(color: &Color) -> tiny_skia::Color {
 }
 
 macro_rules! do_stroke {
-    ($dt:expr, $path:expr, $stroke:expr) => {
+    ($self:expr, $dt:expr, $path:expr, $stroke:expr) => {
         let mut paint = tiny_skia::Paint::default();
         paint.set_color(to_color(&$stroke.color));
         $dt.stroke_path(
             &$path,
             &paint,
             &tiny_skia::Stroke {
-                width: $stroke.width * SCALE,
+                width: $stroke.width * $self.scale,
                 ..Default::default()
             },
             tiny_skia::Transform::identity(),
@@ -56,6 +56,17 @@ pub struct TinySkiaPlotter {
     viewbox: Option<Rect>,
     scale: f32,
     cache: PlotterImpl,
+    width: u32,
+    height: u32,
+}
+
+impl TinySkiaPlotter {
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+    pub fn height(&self) -> u32 {
+        self.height
+    }
 }
 
 #[allow(clippy::new_without_default)]
@@ -63,8 +74,10 @@ impl TinySkiaPlotter {
     pub fn new() -> Self {
         TinySkiaPlotter {
             viewbox: None,
-            scale: 1.0,
+            scale: SCALE,
             cache: PlotterImpl::new(),
+            width: 0,
+            height: 0,
         }
     }
 }
@@ -81,23 +94,24 @@ impl Plotter for TinySkiaPlotter {
         file.write_all(buffer.as_slice())
     }
 
-    fn write<W: std::io::Write>(mut self, writer: &mut W) -> std::io::Result<()> {
+    fn write<W: std::io::Write>(mut self, writer: &mut W) -> std::io::Result<(u32, u32)> {
         let mut paint = tiny_skia::Paint::default();
         paint.set_color_rgba8(0, 127, 0, 200);
         paint.anti_alias = true;
 
         let mut dt = if let Some(viewbox) = &self.viewbox {
             tiny_skia::Pixmap::new(
-               (viewbox.end.x * SCALE) as u32,
-                (viewbox.end.y * SCALE) as u32,
+                (viewbox.end.x * self.scale) as u32,
+                (viewbox.end.y * self.scale) as u32,
             )
             .unwrap()
         } else {
-            tiny_skia::Pixmap::new((297.0 * SCALE) as u32, (210.0 * SCALE) as u32).unwrap()
+            tiny_skia::Pixmap::new((297.0 * self.scale) as u32, (210.0 * self.scale) as u32)
+                .unwrap()
         };
         let mut pb = tiny_skia::PathBuilder::new();
 
-        self.cache.scale(SCALE);
+        self.cache.scale(self.scale);
 
         for item in self.cache.iter() {
             match item {
@@ -109,7 +123,7 @@ impl Plotter for TinySkiaPlotter {
                     if let Some(fill) = stroke.fill {
                         do_fill!(dt, &path, fill);
                     }
-                    do_stroke!(dt, &path, stroke);
+                    do_stroke!(self, dt, &path, stroke);
                     pb = tiny_skia::PathBuilder::new();
                 }
                 super::PlotterNodes::Rect { rect, stroke } => {
@@ -123,7 +137,7 @@ impl Plotter for TinySkiaPlotter {
                         if let Some(fill) = stroke.fill {
                             do_fill!(dt, &path, fill);
                         }
-                        do_stroke!(dt, &path, stroke);
+                        do_stroke!(self, dt, &path, stroke);
                     } else {
                         println!(
                             "Unknwon Rect: {} {} {} {}",
@@ -140,16 +154,11 @@ impl Plotter for TinySkiaPlotter {
                     end,
                     stroke,
                 } => {
-
-
-
                     //let center = center();
                     //
-                    let mut path =
-                        tiny_skia::PathBuilder::new();
-                    
-                    let ctrl = calculate_control_point(*start, *end, *mid);
+                    let mut path = tiny_skia::PathBuilder::new();
 
+                    let ctrl = calculate_control_point(*start, *end, *mid);
 
                     path.move_to(start.x, start.y);
                     path.cubic_to(ctrl.x, ctrl.y, mid.x, mid.y, end.x, end.y);
@@ -171,47 +180,39 @@ impl Plotter for TinySkiaPlotter {
                     //    path_builder.line_to(x, y);
                     //}
 
-
                     //path.move_to(start.x, start.y);
                     //path.quad_to(mid.x, mid.y, end.x, end.y);
                     let path = path.finish().unwrap();
                     if let Some(fill) = stroke.fill {
                         do_fill!(dt, &path, fill);
                     }
-                    do_stroke!(dt, &path, stroke);
+                    do_stroke!(self, dt, &path, stroke);
 
-
-
-                    let path =
-                        tiny_skia::PathBuilder::from_circle(start.x, start.y, 0.1).unwrap();
+                    let path = tiny_skia::PathBuilder::from_circle(start.x, start.y, 0.1).unwrap();
                     do_fill!(dt, &path, Color::blue());
-                    do_stroke!(dt, &path, Paint::blue());
-                    let path =
-                        tiny_skia::PathBuilder::from_circle(mid.x, mid.y, 0.1).unwrap();
+                    do_stroke!(self, dt, &path, Paint::blue());
+                    let path = tiny_skia::PathBuilder::from_circle(mid.x, mid.y, 0.1).unwrap();
                     do_fill!(dt, &path, Color::green());
-                    do_stroke!(dt, &path, Paint::green());
-                    let path =
-                        tiny_skia::PathBuilder::from_circle(end.x, end.y, 0.1).unwrap();
+                    do_stroke!(self, dt, &path, Paint::green());
+                    let path = tiny_skia::PathBuilder::from_circle(end.x, end.y, 0.1).unwrap();
                     do_fill!(dt, &path, Color::red());
-                    do_stroke!(dt, &path, Paint::red());
-
-
+                    do_stroke!(self, dt, &path, Paint::red());
                 }
                 super::PlotterNodes::Circle {
                     center,
                     radius,
                     stroke,
                 } => {
-                   let path =
+                    let path =
                         tiny_skia::PathBuilder::from_circle(center.x, center.y, *radius).unwrap();
                     if let Some(fill) = stroke.fill {
                         do_fill!(dt, &path, fill);
                     }
-                    do_stroke!(dt, &path, stroke);
+                    do_stroke!(self, dt, &path, stroke);
                 }
                 super::PlotterNodes::Text { text, pos, effects } => {
-                    let glyphs = rasterize(text, pos, effects).unwrap();
-                    for g in glyphs { 
+                    let glyphs = rasterize(text, pos, effects, self.scale).unwrap();
+                    for g in glyphs {
                         //TODO align
                         let mut pixmap = Pixmap::new(g.width, g.height).unwrap();
                         pixmap.data_mut().copy_from_slice(&g.data);
@@ -234,7 +235,7 @@ impl Plotter for TinySkiaPlotter {
 
         let res = dt.encode_png()?;
         writer.write_all(res.as_slice())?;
-        Ok(())
+        Ok((dt.width(), dt.height()))
     }
 
     fn set_view_box(&mut self, rect: Rect) {
@@ -242,7 +243,7 @@ impl Plotter for TinySkiaPlotter {
     }
 
     fn scale(&mut self, scale: f32) {
-        self.scale = scale;
+        self.scale *= scale;
     }
 
     fn move_to(&mut self, pt: Pt) {

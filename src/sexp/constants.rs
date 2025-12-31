@@ -1,5 +1,3 @@
-
-
 pub mod test {
     pub const SCHEMA_SUMME: &str = "tests/summe/summe.kicad_sch";
 }
@@ -19,6 +17,7 @@ pub mod el {
     pub const DIAMETER: &str = "diameter";
     pub const DNP: &str = "dnp";
     pub const EFFECTS: &str = "effects";
+    pub const EMBEDDED_FONTS: &str = "embedded_fonts";
     pub const END: &str = "end";
     pub const EXCLUDE_FROM_SIM: &str = "exclude_from_sim";
     pub const EXTENDS: &str = "extends";

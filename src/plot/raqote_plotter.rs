@@ -1,7 +1,11 @@
+use raqote::{
+    DrawOptions, DrawTarget, LineCap, LineJoin, PathBuilder, SolidSource, Source, StrokeStyle,
+};
 
-use raqote::{DrawOptions, DrawTarget, LineCap, LineJoin, PathBuilder, SolidSource, Source, StrokeStyle};
-
-use crate::{gr::{Color, Effects, Pos, Pt, Pts, Rect}, math::fonts::OSIFONT};
+use crate::{
+    gr::{Color, Effects, Pos, Pt, Pts, Rect},
+    math::fonts::OSIFONT,
+};
 
 use super::{Paint, Plotter, PlotterImpl};
 
@@ -21,7 +25,10 @@ macro_rules! do_stroke {
         $dt.stroke(
             $path,
             &Source::Solid(SolidSource {
-                r, g, b, a: 255,  //TODO what is with the a
+                r,
+                g,
+                b,
+                a: 255, //TODO what is with the a
             }),
             &StrokeStyle {
                 cap: LineCap::Round,
@@ -29,11 +36,10 @@ macro_rules! do_stroke {
                 width: $stroke.width * SCALE,
                 ..StrokeStyle::default()
             },
-            &DrawOptions::new()
+            &DrawOptions::new(),
         );
     };
 }
-
 
 ///Plot a schema/pcb to a svg file.
 pub struct RaqotePlotter {
@@ -59,11 +65,13 @@ impl Plotter for RaqotePlotter {
     }
 
     fn save(mut self, path: &std::path::Path) -> std::io::Result<()> {
-
         let mut dt = if let Some(viewbox) = self.viewbox {
-            DrawTarget::new((viewbox.end.x * SCALE) as i32, (viewbox.end.y * SCALE) as i32)
+            DrawTarget::new(
+                (viewbox.end.x * SCALE) as i32,
+                (viewbox.end.y * SCALE) as i32,
+            )
         } else {
-            DrawTarget::new((297.0 * SCALE) as i32,  (210.0 * SCALE) as i32)
+            DrawTarget::new((297.0 * SCALE) as i32, (210.0 * SCALE) as i32)
         };
         let mut pb = PathBuilder::new();
 
@@ -74,32 +82,57 @@ impl Plotter for RaqotePlotter {
                 super::PlotterNodes::MoveTo(pt) => pb.move_to(pt.x, pt.y),
                 super::PlotterNodes::LineTo(pt) => pb.line_to(pt.x, pt.y),
                 super::PlotterNodes::Close => pb.close(),
-                super::PlotterNodes::Stroke(stroke) => { 
-                    let path = pb.finish(); 
+                super::PlotterNodes::Stroke(stroke) => {
+                    let path = pb.finish();
                     do_stroke!(dt, &path, stroke);
                     pb = PathBuilder::new();
-                },
+                }
                 super::PlotterNodes::Rect { rect, stroke } => {
                     pb.rect(rect.start.x, rect.start.y, rect.end.x, rect.end.y);
-                    let path = pb.finish(); 
+                    let path = pb.finish();
                     do_stroke!(dt, &path, stroke);
                     pb = PathBuilder::new();
-                },
-                super::PlotterNodes::Arc { start, mid, end, stroke } => {
-                    //TODO
-                    //pb.arc(center.x, center.y, *radius, 0.0, std::f32::consts::PI);
-                    //let path = pb.finish(); 
-                    //do_stroke!(dt, &path, stroke);
-                    //pb = PathBuilder::new();
-                },
-                super::PlotterNodes::Circle { center, radius, stroke } => {
-                    pb.arc(center.x, center.y, *radius, 0.0, std::f32::consts::PI);
-                    let path = pb.finish(); 
+                }
+                super::PlotterNodes::Arc {
+                    start,
+                    mid,
+                    end,
+                    stroke,
+                } => {
+                    // Calculate the center of the arc
+                    let center_x = (start.x + end.x) / 2.0;
+                    let center_y = (start.y + end.y) / 2.0;
+
+                    // Calculate the radius
+                    let radius =
+                        ((center_x - start.x).powi(2) + (center_y - start.y).powi(2)).sqrt();
+
+                    // Calculate the start and sweep angles
+                    let start_angle = (start.y - center_y).atan2(start.x - center_x);
+                    let end_angle = (end.y - center_y).atan2(end.x - center_x);
+                    let sweep_angle = end_angle - start_angle;
+
+                    pb.arc(center_x, center_y, radius, start_angle, sweep_angle);
+                    let path = pb.finish();
                     do_stroke!(dt, &path, stroke);
                     pb = PathBuilder::new();
-                },
+                }
+                super::PlotterNodes::Circle {
+                    center,
+                    radius,
+                    stroke,
+                } => {
+                    pb.arc(center.x, center.y, *radius, 0.0, 2.0 * std::f32::consts::PI);
+                    let path = pb.finish();
+                    do_stroke!(dt, &path, stroke);
+                    pb = PathBuilder::new();
+                }
                 super::PlotterNodes::Text { text, pos, effects } => {
-                    let font = font_kit::loader::Loader::from_bytes(std::sync::Arc::new(OSIFONT.to_vec()), 0).unwrap();
+                    let font = font_kit::loader::Loader::from_bytes(
+                        std::sync::Arc::new(OSIFONT.to_vec()),
+                        0,
+                    )
+                    .unwrap();
                     dt.draw_text(
                         &font,
                         effects.font.size.0 * SCALE,
@@ -109,7 +142,7 @@ impl Plotter for RaqotePlotter {
                         &DrawOptions::new(),
                     );
                     pb = PathBuilder::new();
-                },
+                }
             }
         }
         dt.write_png(path)?;
@@ -160,7 +193,7 @@ impl Plotter for RaqotePlotter {
         self.cache.text(text, pos, effects);
     }
 
-    fn write<W: std::io::Write>(self, writer: &mut W) -> std::io::Result<()> {
+    fn write<W: std::io::Write>(self, writer: &mut W) -> std::io::Result<(u32, u32)> {
         todo!()
     }
 }

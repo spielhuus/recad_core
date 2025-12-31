@@ -248,10 +248,10 @@ trait SexpWrite {
 
 /// Access attributes of the drawable elements.
 ///
-/// The `Drawable` trait enales you to set attributes of 
-/// elements. This is used for drawing schematic or pcb.
-/// The elements may not support all attributes. This
-/// is documented in the relevant type definitions.
+/// The `Drawable` trait allows you to configure attributes of elements.
+/// It is employed for drawing schematic or PCB diagrams. However, 
+/// it's important to note that not all elements may support all attributes;
+/// this is clearly indicated in their respective type definitions.
 pub trait Drawable<F> {
     fn attr(self, attr: Attribute) -> F;
 }
@@ -285,4 +285,5 @@ mod tests {
         assert_eq!("Amplifier_Operational:TL072", sym.unwrap().lib_id);
     }
 }
+
 

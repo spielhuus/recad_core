@@ -2,8 +2,6 @@
 
 use std::fmt;
 
-use ndarray::{arr1, Array1};
-
 use crate::{plot::{FontAnchor, FontBaseline}, sexp::constants::el};
 
 ///`Pos` sets the location (x, y) and orientation of an object.

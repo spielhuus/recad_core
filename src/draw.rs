@@ -111,6 +111,7 @@ impl To {
         }
         None
     }
+
     ///Get the direction.
     pub fn direction(&self) -> &Direction {
         for i in &self.attributes {
@@ -120,6 +121,7 @@ impl To {
         }
         &Direction::Left
     }
+
     ///Get the tox position.
     pub fn tox(&self) -> Option<&At> {
         for i in &self.attributes {
@@ -138,7 +140,7 @@ impl To {
         }
         None
     }
-    
+
     ///Get unit, only used for symbols.
     pub fn unit(&self) -> Option<u8> {
         for i in &self.attributes {
@@ -204,7 +206,7 @@ impl Drawer<LocalLabel> for Schema {
         if let Some(angle) = label.attrs.angle() {
             label.pos.angle = angle;
         }
- 
+
         // set the text adjustement
         if label.pos.angle == 0.0 || label.pos.angle == 90.0 {
             label.effects.justify = vec![Justify::Left, Justify::Bottom];
@@ -380,7 +382,11 @@ impl Drawer<Symbol> for Schema {
 
             self.draw(
                 Wire::new()
-                    .attr(Attribute::Direction(if wire_length < 0.0 { Direction::Right } else { Direction::Left }))
+                    .attr(Attribute::Direction(if wire_length < 0.0 {
+                        Direction::Right
+                    } else {
+                        Direction::Left
+                    }))
                     .attr(Attribute::Length(wire_length.abs())),
             )
             .unwrap();
@@ -390,7 +396,11 @@ impl Drawer<Symbol> for Schema {
             });
             self.draw(
                 Wire::new()
-                    .attr(Attribute::Direction(if wire_length < 0.0 { Direction::Left } else { Direction::Right }))
+                    .attr(Attribute::Direction(if wire_length < 0.0 {
+                        Direction::Left
+                    } else {
+                        Direction::Right
+                    }))
                     .attr(Attribute::Length(wire_length.abs())),
             )
             .unwrap();
@@ -421,17 +431,20 @@ impl Drawer<Symbol> for Schema {
         new_symbol.pos.y = start_pt.y;
 
         //set the properties
-        let reference = if new_symbol.property(el::PROPERTY_REFERENCE).starts_with("#PWR") {
+        let reference = if new_symbol
+            .property(el::PROPERTY_REFERENCE)
+            .starts_with("#PWR")
+        {
             self.next_power()
-        } else if new_symbol.property(el::PROPERTY_REFERENCE).starts_with("#FLG") {
+        } else if new_symbol
+            .property(el::PROPERTY_REFERENCE)
+            .starts_with("#FLG")
+        {
             self.next_flag()
         } else {
             symbol.property(el::PROPERTY_REFERENCE)
         };
-        new_symbol.set_property(
-            el::PROPERTY_REFERENCE,
-            reference.as_str(),
-        );
+        new_symbol.set_property(el::PROPERTY_REFERENCE, reference.as_str());
         new_symbol.set_property(
             el::PROPERTY_VALUE,
             symbol.property(el::PROPERTY_VALUE).as_str(),
@@ -447,14 +460,12 @@ impl Drawer<Symbol> for Schema {
         math::place_properties(self, &mut new_symbol);
 
         //add the instances section
-        new_symbol.instances = vec![
-            Instance { 
-                project: self.project.to_string(), 
-                path: format!("/{}", self.uuid),
-                reference: new_symbol.property(el::PROPERTY_REFERENCE), 
-                unit: selected_unit,
-            }
-        ];
+        new_symbol.instances = vec![Instance {
+            project: self.project.to_string(),
+            path: format!("/{}", self.uuid),
+            reference: new_symbol.property(el::PROPERTY_REFERENCE),
+            unit: selected_unit,
+        }];
 
         if let Some(last_pos) = new_last_pos {
             self.last_pos = last_pos;
@@ -497,10 +508,14 @@ impl Drawable<NoConnect> for NoConnect {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::{draw::{At, Attribute}, gr::Pt, schema::{LocalLabel, SchemaItem}, Drawable, Drawer, Schema};
+    use crate::{
+        draw::{At, Attribute},
+        gr::Pt,
+        schema::{LocalLabel, SchemaItem},
+        Drawable, Drawer, Schema,
+    };
 
     #[test]
     fn test_local_label() {
@@ -517,10 +532,5 @@ mod tests {
         assert_eq!(12.5, new_label.pos.x);
         assert_eq!(12.5, new_label.pos.y);
         assert_eq!(90.0, new_label.pos.angle);
-
-
-
     }
 }
-
-

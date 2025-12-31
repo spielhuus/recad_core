@@ -60,7 +60,7 @@ impl Plotter for SvgPlotter {
         file.write_all(buffer.as_slice())
     }
 
-    fn write<W: Write>(self, writer: &mut W) -> std::io::Result<()> {
+    fn write<W: Write>(self, writer: &mut W) -> std::io::Result<(u32, u32)> {
         let mut document: Document = Document::new();
         if let Some(viewbox) = &self.viewbox {
             document = document.set(
@@ -90,7 +90,7 @@ impl Plotter for SvgPlotter {
 
         document.append(self.paths);
         svgwrite(writer, &document).unwrap();
-        Ok(())
+        Ok((0, 0)) // TODO
     }
 
     fn set_view_box(&mut self, rect: Rect) {
@@ -155,7 +155,7 @@ impl Plotter for SvgPlotter {
     }
 
     fn arc(&mut self, start: Pt, mid: Pt, end: Pt, stroke: Paint) {
-        let (center, radius) = calculate_circle(start, mid, end).unwrap();  
+        let (center, radius) = calculate_circle(start, mid, end).unwrap();
         let start_angle = angle(&center, &start);
         let end_angle = angle(&center, &end);
         let sweep_flag = sweep_flag(&start, &mid, &end);
@@ -171,14 +171,7 @@ impl Plotter for SvgPlotter {
                 "d",
                 format!(
                     "M{:.2} {:.2} A{:.2} {:.2} 0.0 {} {} {:.2} {:.2}",
-                    start.x,
-                    start.y,
-                    radius,
-                    radius,
-                    large_arc_flag,
-                    sweep_flag,
-                    end.x,
-                    end.y
+                    start.x, start.y, radius, radius, large_arc_flag, sweep_flag, end.x, end.y
                 ),
             )
             .set("fill", "none")
@@ -243,18 +236,24 @@ fn angle(center: &Pt, point: &Pt) -> f32 {
 
 // calculate the svg sweep flac from star, middle and end points.
 pub fn sweep_flag(start: &Pt, mid: &Pt, end: &Pt) -> String {
-    if (start.x - mid.x) * (end.y - mid.y)
-        > (start.y - mid.y) * (end.x - mid.x) {
+    if (start.x - mid.x) * (end.y - mid.y) > (start.y - mid.y) * (end.x - mid.x) {
         0
     } else {
         1
-    }.to_string()
+    }
+    .to_string()
 }
 
 fn calculate_circle(p1: Pt, p2: Pt, p3: Pt) -> Option<(Pt, f32)> {
     // Calculate the midpoints of p1-p2 and p2-p3
-    let mid1 = Pt { x: (p1.x + p2.x) / 2.0, y: (p1.y + p2.y) / 2.0 };
-    let mid2 = Pt { x: (p2.x + p3.x) / 2.0, y: (p2.y + p3.y) / 2.0 };
+    let mid1 = Pt {
+        x: (p1.x + p2.x) / 2.0,
+        y: (p1.y + p2.y) / 2.0,
+    };
+    let mid2 = Pt {
+        x: (p2.x + p3.x) / 2.0,
+        y: (p2.y + p3.y) / 2.0,
+    };
 
     // Slopes of the perpendicular bisectors
     let slope1 = -(p2.x - p1.x) / (p2.y - p1.y);
@@ -276,5 +275,5 @@ fn calculate_circle(p1: Pt, p2: Pt, p3: Pt) -> Option<(Pt, f32)> {
     // Calculate the radius
     let radius = ((h - p1.x).powi(2) + (k - p1.y).powi(2)).sqrt();
 
-    Some((Pt { x: h, y: k }, radius ))
+    Some((Pt { x: h, y: k }, radius))
 }

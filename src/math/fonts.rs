@@ -13,7 +13,6 @@ use crate::{
     Error,
 };
 
-pub const SCALE: f32 = 25.4 * 0.72; //TODO defined multiple times
 pub static OSIFONT: &[u8] = include_bytes!("osifont-lgpl3fe.ttf");
 lazy_static! {
     static ref FONT_CACHE: FcFontCache = FcFontCache::build();
@@ -116,7 +115,12 @@ pub struct GlyphItem {
     pub data: Vec<u8>,
 }
 
-pub fn rasterize(text: &str, pos: &Pos, effects: &gr::Effects) -> Result<Vec<GlyphItem>, Error> {
+pub fn rasterize(
+    text: &str,
+    pos: &Pos,
+    effects: &gr::Effects,
+    scale: f32,
+) -> Result<Vec<GlyphItem>, Error> {
     let face = get_face(effects);
     load_font(&face)?;
     let last = FONTS.lock().unwrap();
@@ -132,7 +136,7 @@ pub fn rasterize(text: &str, pos: &Pos, effects: &gr::Effects) -> Result<Vec<Gly
     });
     layout.append(
         &[font],
-        &TextStyle::new(text, effects.font.size.0 * 1.3333 * SCALE, 0),
+        &TextStyle::new(text, effects.font.size.0 * 1.3333 * scale, 0),
     );
 
     let (r, g, b) = match effects.font.color.unwrap() {
